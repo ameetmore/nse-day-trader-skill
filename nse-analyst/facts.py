@@ -254,14 +254,22 @@ def parse_results_rss(data):
     return out
 
 
+def norm_company(name):
+    t = (name or "").lower().replace("&", " and ")
+    t = re.sub(r"[^a-z0-9 ]+", " ", t)
+    t = re.sub(r"\b(limited|ltd|the)\b", " ", t)
+    return " ".join(t.split())
+
+
 def latest_filing(items, sym, name=None):
+    """The newest filing that is exactly this company's: the item's title (NSE uses the company
+    name) equals the company name, or the attachment starts with the symbol. A company whose
+    name merely contains the same word is a different company."""
     base = nse_symbol(sym)
-    pats = [re.compile(r"/%s_" % re.escape(base)), re.compile(r"\b%s\b" % re.escape(base))]
-    if name:
-        pats.append(re.compile(re.escape(" ".join(name.split())).replace(r"\ ", r"[\s-]+"), re.I))
+    attach = re.compile(r"/%s_\d{8}" % re.escape(base))
+    want = norm_company(name)
     for it in items:   # the feed is newest first
-        hay = "%s %s %s" % (it["title"], it["description"], it["link"])
-        if any(p.search(hay) for p in pats):
+        if (want and norm_company(it["title"]) == want) or attach.search(it["link"] or ""):
             return it
     return None
 

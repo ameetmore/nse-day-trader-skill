@@ -93,6 +93,20 @@ class News(Tmp):
         self.assertNotIn("Somebody Else", titles)
         self.assertNotIn("Old story", titles)            # older than 48 hours
 
+    def test_same_word_is_not_the_same_company(self):
+        # a universe file gives DEMO its real name; decoys share the word "Demo"
+        os.makedirs(os.path.join(self.dir, "trader"))
+        with open(os.path.join(self.dir, "trader", "universe.txt"), "w", encoding="utf-8") as fh:
+            fh.write("DEMO|Demo Industries Ltd.\n")
+        rc, out, err = self.news("--tickers", "DEMO")
+        titles = [i["title"] for i in json.loads(out)["items"]]
+        self.assertFalse([t for t in titles if "Chemicals" in t or "Demo MF" in t], titles)
+        self.assertTrue([t for t in titles if t.startswith("Demo Industries Limited")], titles)
+        news = load("nse-news", "news")
+        self.assertEqual(news.norm_company("RELIANCE INDUSTRIES LIMITED"), news.norm_company("Reliance Industries Ltd."))
+        self.assertNotEqual(news.norm_company("Reliance Chemotex Industries Limited"),
+                            news.norm_company("Reliance Industries Ltd."))
+
     def test_results_are_important(self):
         rc, out, _ = self.news("--tickers", "DEMO")
         items = json.loads(out)["items"]

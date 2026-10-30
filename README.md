@@ -212,7 +212,7 @@ python3 nse-journal/journal.py settle && python3 nse-journal/journal.py score
 ```
 
 ```bash
-python3 -m unittest discover -s tests -v      # 68 tests, offline
+python3 -m unittest discover -s tests -v      # 69 tests, offline
 python3 tests/make_fixtures.py                # rebuild the synthetic fixtures
 ```
 

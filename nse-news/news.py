@@ -262,7 +262,7 @@ def parse_nse_rss(data, kind):
         when = parse_time(_text(it, "pubDate"))
         key = link or "%s|%s|%s" % (kind, title, desc[:80])
         hay = "%s %s" % (title, desc)
-        out.append({"id": "nse:" + key, "source": "NSE", "kind": kind, "ticker": "",
+        out.append({"id": "nse:" + key, "source": "NSE", "kind": kind, "ticker": "", "company": title,
                     "title": ("%s: %s" % (title, desc)) if desc and desc.lower() != title.lower() else title,
                     "summary": desc, "link": link, "time": when,
                     "important": kind != "announcement" or bool(IMPORTANT.search(hay))})
@@ -305,23 +305,44 @@ def collect_moves(fetcher, watch, errors=None):
     return out
 
 
-NAME_NOISE = re.compile(r"\b(limited|ltd\.?|the|india|industries|corporation|company|co\.?)\b", re.I)
+def norm_company(name):
+    """'Reliance Industries Ltd.' and 'RELIANCE INDUSTRIES LIMITED' -> 'reliance industries'."""
+    t = (name or "").lower().replace("&", " and ")
+    t = re.sub(r"[^a-z0-9 ]+", " ", t)
+    t = re.sub(r"\b(limited|ltd|the)\b", " ", t)
+    return " ".join(t.split())
 
 
 def mention_patterns(watch):
+    """Headline mentions of your other symbols: the symbol as written (case-sensitive, so
+    RELIANCE is not 'Reliance MF') or the full company name."""
     pats = {}
     for t, name in watch.items():
         base = t[:-3] if t.endswith((".NS", ".BO")) else t
-        alts = [r"\b%s\b" % re.escape(base), r"\bNSE\s*:\s*%s\b" % re.escape(base),
-                r"/%s_" % re.escape(base)]           # NSE attachments: .../RELIANCE_29102026...pdf
-        if name:
-            full = " ".join(name.split())
-            alts.append(re.escape(full).replace(r"\ ", r"[\s-]+"))
-            core = " ".join(NAME_NOISE.sub(" ", full).split())
-            if len(core) >= 6:
-                alts.append(r"\b%s\b" % re.escape(core).replace(r"\ ", r"[\s-]+"))
-        pats[t] = re.compile("|".join(alts), re.I if name else 0)
+        alts = [r"\bNSE\s*:\s*%s\b" % re.escape(base), r"\(%s\)" % re.escape(base)]
+        if len(base) >= 3:
+            alts.append(r"(?<![\w&-])%s(?![\w&-])" % re.escape(base))
+        rx = [re.compile("|".join(alts))]
+        if name and norm_company(name):
+            words = norm_company(name).split()
+            rx.append(re.compile(r"\b%s\b" % r"[\W_]+".join(re.escape(w) for w in words), re.I))
+        pats[t] = rx
     return pats
+
+
+def nse_touches(item, watch):
+    """An NSE filing is yours only when its company is exactly yours (NSE titles are the
+    company's name), or its attachment starts with your symbol: .../RELIANCE_29102026...pdf.
+    'Reliance Chemotex Industries' or a 'Reliance MF' NAV is not RELIANCE."""
+    company = norm_company(item.get("company"))
+    out = set()
+    for t, name in watch.items():
+        base = t[:-3] if t.endswith((".NS", ".BO")) else t
+        if name and company and norm_company(name) == company:
+            out.add(t)
+        elif re.search(r"/%s_\d{8}" % re.escape(base), item.get("link") or ""):
+            out.add(t)
+    return out
 
 
 def tag(items, watch):
@@ -329,10 +350,14 @@ def tag(items, watch):
     pats = mention_patterns(watch)
     for it in items:
         hay = "%s %s %s" % (it["title"], it.get("summary") or "", it.get("link") or "")
-        touches = {it["ticker"]} if it["ticker"] in watch else set()
-        for t, rx in pats.items():
-            if rx.search(hay):
-                touches.add(t)
+        if it["source"] == "NSE":
+            touches = nse_touches(it, watch)
+        else:
+            touches = {it["ticker"]} if it["ticker"] in watch else set()
+            text = "%s %s" % (it["title"], it.get("summary") or "")
+            for t, rxs in pats.items():
+                if any(r.search(text) for r in rxs):
+                    touches.add(t)
         it["touches"] = sorted(touches)
         it["tags"] = [label for label, rx in KEYWORDS if re.search(rx, hay, re.I)]
         if it["kind"] == "results" and "earnings" not in it["tags"]:
