@@ -1,6 +1,7 @@
 # The NSE Day Trader skill
 
-14 Claude skills for trading India's NSE and BSE: scan NIFTY charts for
+16 Claude skills for trading India's NSE and BSE, including intraday NIFTY 50 and SENSEX
+option buying: scan NIFTY charts for
 setups, convene a research committee that argues bull against bear before it
 commits to a rating, time every entry and exit on NSE's tick grid, size every
 trade after Indian trading costs, replay every outcome before you risk a rupee,
@@ -60,7 +61,7 @@ then use `py` where this README says `python3`, and `\` in paths:
 `nse-budget/config.example.json` to `trader/config.json` in your project and
 set your budget and limits in rupees.
 
-## The fourteen
+## The sixteen
 
 | command | job | what it does |
 | --- | --- | --- |
@@ -77,6 +78,8 @@ set your budget and limits in rupees.
 | `/nse-deals` | Deals Tracker | NSE's daily bulk and block deals: who bought and sold big, net by stock, flags your stocks. |
 | `/nse-technicals` | Technical Analyst | Daily SMA 50/200, EMA 10, MACD, RSI, Bollinger, ATR, VWMA and the 52-week range as one verified snapshot; NIFTY and India VIX regime; point in time. |
 | `/nse-research` | Research Committee | Four analysts, a bull vs bear debate, a research manager, a trader, an aggressive / conservative / neutral risk debate and a portfolio manager's Buy-to-Sell rating, grounded in the pack's own data. |
+| `/nse-fno-chain` | Option Chain | NIFTY 50 and SENSEX: expiries (holiday-shifted), Kite instruments, and from Kite quotes the per-strike IV, Greeks, spreads, OI, ATM straddle, PCR, max pain. |
+| `/nse-fno-plan` | Option Planner | Buys one call or put on an index signal: strike near delta 0.55, premium stop and target from the index levels, SL stop-limit exit, lots sized to your max loss after F&O costs. |
 | `/nse-journal` | Decision Journal | Records every rating and trade, scores each call against NIFTY once its window has traded, keeps a lesson for it, and feeds the lessons back. |
 
 ## How it fits together
@@ -91,6 +94,44 @@ alerts: stop, target, flat by 15:10                                             
 journal: settle every call against NIFTY, write the lesson, keep the scorecard      (after)
 news / analyst / deals / journal settle                                             (on a schedule)
 ```
+
+## Index options: NIFTY 50 and SENSEX
+
+> SEBI's study of FY2025-26 found **87.7% of individual F&O traders lost money**. Bought
+> options lose value every minute the index stands still. This part of the pack only BUYS
+> NIFTY 50 and SENSEX options, intraday, with a stop, a lot cap and your yes on every order.
+> No option writing, no futures. It is off until you set `"allow_options": true`.
+
+```
+news + regime -> entry on ^NSEI / ^BSESN -> fno-chain (Kite quotes) -> fno-plan -> risk -> broker
+```
+
+1. **Signal on the index.** `entry.py check ^NSEI --write` (or `^BSESN`): the first 5-minute
+   close above the 9:15-9:30 range. For a put, give the planner `--direction down` and levels.
+2. **Chain.** Claude asks Kite for the quotes `chain.py symbols NIFTY --spot ...` lists, saves
+   them, and `chain.py analyse --write` prints IV, Greeks, spreads, OI, PCR, max pain and the
+   move the ATM straddle implies.
+3. **Plan.** `plan.py --write` picks a liquid strike near delta 0.55, prices the stop and
+   target from your index levels (Black-Scholes at the option's own IV), sets an SL
+   stop-limit exit (SL-M is not accepted on index options), and sizes whole lots to your max
+   loss after costs, `fno.max_lots`, `fno.max_premium_inr` and the freeze limit. It prints the
+   break-even win rate the trade needs.
+4. **Risk and broker.** `/nse-risk` checks lots, ticks, exchange (NFO/BFO), buy-to-open only
+   and the expiry-day cutoff (no new entries after 13:00 in a contract expiring today);
+   `/nse-broker` shows the three Kite calls (LIMIT entry, SL exit, LIMIT target).
+
+| | NIFTY 50 | SENSEX |
+| --- | --- | --- |
+| Kite exchange | NFO | BFO |
+| Lot | 65 | 20 |
+| Weekly expiry | Tuesday (monthly: last Tuesday) | Thursday (monthly: last Thursday) |
+| Strike step | 50 | 100 |
+| Freeze per order | 3,510 | set in config |
+
+A holiday moves the expiry to the trading day before. Costs (Zerodha options): ₹20 an order,
+STT 0.15% of the sell premium (from 1 April 2026), exchange 0.03553% NSE / 0.0325% BSE,
+SEBI ₹10 a crore, stamp duty 0.003% on the buy, GST 18%. Every figure can be overridden under
+`"fno"` in `trader/config.json` when the exchanges revise it.
 
 ## The research committee
 
@@ -209,10 +250,13 @@ python3 nse-technicals/indicators.py snapshot RELIANCE              # the verifi
 python3 nse-technicals/indicators.py regime                         # NIFTY 50 trend + India VIX
 python3 nse-research/research.py gather RELIANCE                    # the committee's evidence bundle
 python3 nse-journal/journal.py settle && python3 nse-journal/journal.py score
+python3 nse-fno-chain/chain.py expiries NIFTY                       # next NIFTY expiries
+python3 nse-fno-chain/chain.py analyse NIFTY --quotes trader/fno/quotes-NIFTY.json --spot 25812 --write
+python3 nse-fno-plan/plan.py --write                                # one bought option, sized in lots
 ```
 
 ```bash
-python3 -m unittest discover -s tests -v      # 69 tests, offline
+python3 -m unittest discover -s tests -v      # 89 tests, offline
 python3 tests/make_fixtures.py                # rebuild the synthetic fixtures
 ```
 
@@ -233,8 +277,10 @@ any strategy makes money.
 - **Circuits and surveillance:** price bands, upper/lower circuits and ASM/GSM
   lists can stop a stop from filling. The pack warns about this; it does not
   read the lists.
-- **Longs only, cash equity only.** No F&O, no shorts unless you change the
-  config, and then with your eyes open.
+- **Equity: longs only. Options: buying NIFTY 50 and SENSEX options only.** No
+  writing, no futures, no stock options. Options stay off until `"allow_options": true`.
+- **Option data comes from Kite.** Yahoo has no Indian option quotes, so the chain needs
+  Zerodha's Kite MCP server connected; the offline fixtures are synthetic.
 
 ## Safety
 

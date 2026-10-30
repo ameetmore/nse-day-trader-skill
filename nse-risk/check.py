@@ -90,6 +90,11 @@ DERIVATIVE = re.compile(r"^[A-Z0-9&\-]+\d{2}([A-Z]{3}|[1-9OND]\d{2})(\d+(\.\d+)?
 TICKER = re.compile(r"^[A-Z0-9][A-Z0-9&\-]{0,19}(\.(NS|BO))?$")
 EXCHANGES = {"NSE", "BSE"}
 PRODUCTS = {"MIS", "CNC"}
+# Index options this pack may BUY (allow_options): underlying -> (exchange, default lot size)
+INDEX_OPTIONS = {"NIFTY": ("NFO", 65), "SENSEX": ("BFO", 20)}
+INDEX_FREEZE = {"NIFTY": 3510}
+OPTION_RX = re.compile(r"^(NIFTY|SENSEX)\d{2}(?:[1-9OND]\d{2}|[A-Z]{3})\d+(?:\.\d+)?(CE|PE)$")
+FNO_DEFAULTS = {"max_lots": 2, "max_premium_inr": 30000, "expiry_no_entries_after": "13:00"}
 TICK_BANDS = ((250, 0.01), (1000, 0.05), (5000, 0.10), (10000, 0.50), (20000, 1.00))
 
 
@@ -441,12 +446,15 @@ def check(orders, cfg, portfolio=None, prices=None, state=None, today=None, now=
             reasons.append("format: no qty")
         elif _f(qty) is not None and abs(_f(qty) - round(_f(qty))) > 1e-9:
             reasons.append("format: whole shares only, got qty %r" % qty)
+        deriv = bool(sym and DERIVATIVE.match(sym.replace(" ", "")))
         exch = str(o.get("exchange") or ("BSE" if sym.endswith(".BO") else "NSE")).strip().upper()
-        if exch not in EXCHANGES:
+        if not deriv and exch not in EXCHANGES:
             reasons.append("format: exchange %r: this pack trades NSE and BSE cash equity only" % o.get("exchange"))
         product = str(o.get("product") or "MIS").strip().upper()
-        if product not in PRODUCTS:
+        if not deriv and product not in PRODUCTS:
             reasons.append("format: product %r: use MIS (intraday) or CNC (delivery)" % o.get("product"))
+        if deriv and product not in ("MIS", "NRML"):
+            reasons.append("format: product %r: an option is MIS (intraday) or NRML" % o.get("product"))
         for k in PRICE_FIELDS:
             if o.get(k) is not None:
                 v = _f(o.get(k))
@@ -470,7 +478,7 @@ def check(orders, cfg, portfolio=None, prices=None, state=None, today=None, now=
                   "stop_loss_limit_price"):
             v = _f(o.get(k))
             if v:
-                t = tick_for(v, tick_over)
+                t = 0.05 if deriv else tick_for(v, tick_over)
                 if not on_tick(v, t):
                     reasons.append("tick: %s %s is not on the ₹%.2f tick for that price; the exchange "
                                    "rejects it (round it, or set tick_size)" % (k, _p(v), t))
@@ -491,12 +499,30 @@ def check(orders, cfg, portfolio=None, prices=None, state=None, today=None, now=
                          % (oc or "advanced_instructions"))
 
         # asset
-        if sym and DERIVATIVE.match(sym.replace(" ", "")):
+        opt = None
+        if deriv:
             if not c.get("allow_options"):
                 reasons.append("asset: %s is a futures or options contract; F&O is off "
                                "(\"allow_options\": false)" % sym)
             else:
-                warns.append("F&O order: SEBI's own study found most individual F&O traders lose money")
+                m = OPTION_RX.match(sym.replace(" ", ""))
+                if not m:
+                    reasons.append("asset: %s: this pack trades NIFTY 50 and SENSEX index options only (no futures, "
+                                   "no stock or other index options)" % sym)
+                else:
+                    opt = m.group(1)
+                    want_exch, lot_default = INDEX_OPTIONS[opt]
+                    if exch != want_exch:
+                        reasons.append("format: %s options trade on %s, not %s" % (opt, want_exch, exch))
+                    lot = int(_f(plan.get("lot_size")) or ((c.get("fno") or {}).get(opt) or {}).get("lot") or lot_default)
+                    qn = _f(qty)
+                    if qn and lot and qn % lot:
+                        reasons.append("format: %s is not a whole number of %s lots (%d units a lot)" % (qty, opt, lot))
+                    freeze = ((c.get("fno") or {}).get(opt) or {}).get("freeze") or INDEX_FREEZE.get(opt)
+                    if qn and freeze and qn > freeze:
+                        reasons.append("format: %s units is over the %s freeze quantity %d for one order"
+                                       % (qty, opt, freeze))
+                    warns.append("F&O: SEBI's study of FY2025-26 found 87.7% of individual F&O traders lost money")
         elif sym and ("/" in sym or not TICKER.match(sym)):
             reasons.append("asset: %s does not look like an NSE or BSE equity symbol; "
                            "this pack trades cash equity only" % sym)
@@ -545,6 +571,29 @@ def check(orders, cfg, portfolio=None, prices=None, state=None, today=None, now=
             later.append("price: no price for %s to size a %s-share order; add it to "
                          "trader/prices.json (nse-alerts: alerts.py quote %s --write)" % (sym, qty, sym))
 
+        # index options: buy to open only, lots and premium caps, the expiry-day cutoff
+        if opt:
+            fno = dict(FNO_DEFAULTS)
+            fno.update(c.get("fno") or {})
+            if kind == "entry" and side == "sell":
+                later.append("options: selling an option you do not hold is writing it (unlimited loss); this "
+                             "pack only buys options")
+            if kind == "entry":
+                lot = int(_f(plan.get("lot_size")) or INDEX_OPTIONS[opt][1])
+                lots = (q or 0) / lot if lot else 0
+                if fno.get("max_lots") and lots > float(fno["max_lots"]) + 1e-9:
+                    later.append("options: %g lots is over fno.max_lots %s" % (lots, fno["max_lots"]))
+                if value is not None and fno.get("max_premium_inr") and value > float(fno["max_premium_inr"]) + CENT:
+                    later.append("options: premium %s is over fno.max_premium_inr %s"
+                                 % (money(value), money(fno["max_premium_inr"])))
+                exp = str(plan.get("expiry") or "")
+                cut = hhmm(fno.get("expiry_no_entries_after"), "fno.expiry_no_entries_after")
+                if exp == today and cut and now_et.time() >= cut:
+                    later.append("options: %s expires today; no new option entries after %s on the expiry day "
+                                 "(time value collapses into the close)" % (sym, cut.strftime("%H:%M")))
+                elif exp == today:
+                    warns.append("expiry day for %s: time decay is at its fastest" % sym)
+
         # blocked list and size
         if sym in blocked:
             later.append("blocked: %s is on your blocked list" % sym)
@@ -590,6 +639,7 @@ def check(orders, cfg, portfolio=None, prices=None, state=None, today=None, now=
         if kind == "entry" and side in ("buy", "sell"):
             long = side == "buy"
             leg_stop, plan_stop = _f(o.get("stop_loss_stop_price")), _f(plan.get("stop"))
+            sl_limit = _f(o.get("stop_loss_limit_price"))
             stop = leg_stop if leg_stop else plan_stop
             target = _f(o.get("take_profit_limit_price")) or _f(plan.get("target"))
             if leg_stop and plan_stop and abs(leg_stop - plan_stop) > CENT:
@@ -609,7 +659,8 @@ def check(orders, cfg, portfolio=None, prices=None, state=None, today=None, now=
                     later.append("stop: the stop %s must be %s the entry %s for a %s"
                                  % (_p(stop), "below" if long else "above", _p(ref), side))
                 else:
-                    risk_c = int(round(abs(ref - stop) * 100))
+                    worst = sl_limit if (sl_limit and long and sl_limit < stop) else stop   # an SL fills at its limit or better
+                    risk_c = int(round(abs(ref - worst) * 100))
                     risk_ps = risk_c / 100.0
                     shares = q if q is not None else ((value or 0) / ref)
                     fees = _f(plan.get("charges_at_stop")) or 0.0
@@ -707,7 +758,7 @@ def check(orders, cfg, portfolio=None, prices=None, state=None, today=None, now=
                     acct["shares"][sym] = held - value / ref
         results.append({
             "index": i, "symbol": sym, "side": side, "kind": kind,
-            "amount": money(_f(notional) or 0) if notional is not None else ("%s shares" % qty),
+            "amount": money(_f(notional) or 0) if notional is not None else ("%s %s" % (qty, "units" if DERIVATIVE.match(sym.replace(" ", "")) else "shares")),
             "value_inr": round(value, 2) if value is not None else None,
             "entry_ref": round(ref, 2) if ref else None, "entry_ref_from": ref_from,
             "stop": stop, "target": target, "risk_per_share": risk_ps, "max_loss": max_loss,

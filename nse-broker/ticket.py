@@ -159,9 +159,12 @@ TAG = "nsedaytrader"   # Kite order tag: alphanumeric, at most 20 characters
 
 
 def kite_symbol(order):
-    """(exchange, tradingsymbol): RELIANCE -> NSE RELIANCE, 500325.BO or SYM.BO -> BSE SYM."""
+    """(exchange, tradingsymbol): RELIANCE -> NSE RELIANCE, SYM.BO -> BSE SYM,
+    NIFTY26N0325750CE -> NFO, SENSEX26N0584000PE -> BFO."""
     sym = str(order.get("symbol", "")).strip().upper()
     exch = str(order.get("exchange") or "").strip().upper()
+    if not exch and re.match(r"^(NIFTY|SENSEX)\d{2}", sym) and sym.endswith(("CE", "PE")):
+        return ("BFO" if sym.startswith("SENSEX") else "NFO"), sym
     if sym.endswith(".BO"):
         return "BSE", sym[:-3]
     if sym.endswith(".NS"):
@@ -185,7 +188,8 @@ def kite_calls(order):
     """The exact place_order arguments for Zerodha's Kite MCP server, in order.
     Kite has no bracket order (Zerodha retired BO), so a bracket becomes:
       1. the entry (MARKET or LIMIT)
-      2. after the entry FILLS: a stop-loss, SL-M sell with trigger_price = the stop
+      2. after the entry FILLS: a stop-loss, SL-M sell with trigger_price = the stop (SL, a
+         stop-limit with a limit price, for index options and on BSE, which do not take SL-M)
       3. after the entry fills: the target, LIMIT sell at the target price
     When the stop or the target fills, the other one must be canceled (cancel_order).
     "why" and "plan" are ours and are never sent."""
@@ -204,8 +208,19 @@ def kite_calls(order):
     if is_bracket(order):
         exit_side = "SELL" if side == "BUY" else "BUY"
         if order.get("stop_loss_stop_price") is not None:
-            calls.append({"step": "stop-loss", "when": "after the entry fills", "tool": "place_order",
-                          "input": _leg(order, exit_side, qty, "SL-M", trigger=order["stop_loss_stop_price"])})
+            trig = float(order["stop_loss_stop_price"])
+            lim = order.get("stop_loss_limit_price")
+            exch, _ = kite_symbol(order)
+            if lim is None and exch in ("BSE", "BFO", "NFO"):
+                # SL-M is not accepted for index options, and BSE dropped it: use SL with a small buffer
+                step = 0.05
+                gap = max(step, round(trig * 0.01 / step) * step)
+                lim = max(step, round((trig - gap if exit_side == "SELL" else trig + gap) / step) * step)
+            if lim is not None:
+                leg = _leg(order, exit_side, qty, "SL", price=float(lim), trigger=trig)
+            else:
+                leg = _leg(order, exit_side, qty, "SL-M", trigger=trig)
+            calls.append({"step": "stop-loss", "when": "after the entry fills", "tool": "place_order", "input": leg})
         if order.get("take_profit_limit_price") is not None:
             calls.append({"step": "target", "when": "after the entry fills", "tool": "place_order",
                           "input": _leg(order, exit_side, qty, "LIMIT", price=order["take_profit_limit_price"])})
@@ -240,6 +255,9 @@ def max_loss(order):
     if not stop or not q:
         return None, stop
     plan = order.get("plan") or {}
+    if _f(plan.get("net_loss_at_stop")) is not None and _f(plan.get("stop")) and \
+            abs(_f(plan["stop"]) - stop) < 0.005:
+        return round(_f(plan["net_loss_at_stop"]), 2), stop     # the planner's own figure, with costs
     if str(order.get("type", "market")) == "limit" and _f(order.get("limit_price")):
         entry = _f(order["limit_price"])
     elif _f(plan.get("net_loss_at_stop")) is not None:
@@ -659,7 +677,9 @@ def cmd_flatten(a):
     plan = read_json(a.plan, "plan", required=False) or {}
     flat_by = (plan.get("flat_by") if str(plan.get("symbol", "")).upper() == sym else None) \
         or cfg.get("flat_by") or "15:10"
-    order = {"symbol": sym, "exchange": "BSE" if sym.endswith(".BO") else "NSE", "product": "MIS",
+    is_opt = bool(re.match(r"^(NIFTY|SENSEX)\d{2}", sym)) and sym.endswith(("CE", "PE"))
+    order = {"symbol": sym, "exchange": ("BFO" if sym.startswith("SENSEX") else "NFO") if is_opt else
+             ("BSE" if sym.endswith(".BO") else "NSE"), "product": "MIS",
              "side": "sell", "qty": _str_num(qty), "type": "market", "time_in_force": "day",
              "why": "flat by %s IST: closes the %s day trade before the close (qty from %s)"
              % (flat_by, sym, source)}

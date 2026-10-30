@@ -36,8 +36,15 @@ python3 "${CLAUDE_SKILL_DIR}/check.py" --no-write
   limit order without a price, a bracket missing a leg.
 - **tick:** a limit, stop or target off NSE's tick grid (the exchange rejects
   it).
-- **asset:** futures and options (`NIFTY26NOV24000CE`, `...FUT`) unless
-  `"allow_options": true`; anything that is not an NSE/BSE equity symbol.
+- **asset:** futures and options unless `"allow_options": true`. Even then,
+  only NIFTY 50 options on NFO and SENSEX options on BFO (no futures, no stock
+  or other index options); anything else must be an NSE/BSE equity symbol.
+- **index options (with `allow_options`):** whole lots (NIFTY 65, SENSEX 20),
+  within the freeze quantity, prices on the 0.05 tick, product MIS or NRML,
+  buy to open only (selling an option you do not hold is writing it: blocked),
+  `fno.max_lots`, `fno.max_premium_inr`, and no new entry in a contract on its
+  expiry day after `fno.expiry_no_entries_after` (13:00). The loss is measured
+  to the SL order's limit price, the worse fill.
 - **short:** selling more than you hold, unless `"allow_short": true`.
 - **entries also:** blocked list, size limits, position cap, cash buffer
   (or margin when `allow_margin` is false), duplicates, orders per day, no

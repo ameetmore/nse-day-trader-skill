@@ -51,7 +51,12 @@ Zerodha retired bracket orders, so one planned trade is three Kite orders:
 3. **after the entry fills:** the **target**, SELL `LIMIT` at the target.
 
 When one exit fills, **cancel the other** (`cancel_order`), or it can open a
-new position the wrong way. If Kite's RMS rejects the second exit order for
+new position the wrong way.
+
+**Index options (NFO / BFO)** from `/nse-fno-plan`: the entry is a LIMIT at the
+ask, and the stop is an **SL** (stop-limit, `trigger_price` and `price`), never
+SL-M: exchanges do not accept SL-M on index options, and BSE dropped it
+altogether. The ticket shows the exact calls. If Kite's RMS rejects the second exit order for
 margin, keep the SL-M stop at the broker and let `/nse-alerts` ring at the
 target instead. `ticket.py show` prints all three calls with exact arguments.
 

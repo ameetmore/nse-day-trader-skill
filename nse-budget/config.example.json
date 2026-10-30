@@ -22,5 +22,20 @@
   "tick_size": null,
   "blocked": [],
   "allow_options": false,
-  "allow_short": false
+  "allow_short": false,
+  "fno": {
+    "max_lots": 2,
+    "max_premium_inr": 30000,
+    "sl_limit_buffer_pct": 2.0,
+    "expiry_no_entries_after": "13:00",
+    "min_target_r": 1.5,
+    "NIFTY": {
+      "lot": 65,
+      "freeze": 3510
+    },
+    "SENSEX": {
+      "lot": 20,
+      "freeze": null
+    }
+  }
 }

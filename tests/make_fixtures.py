@@ -168,6 +168,51 @@ def main():
         fname = {"DEMO.NS": "DEMO", "^NSEI": "NSEI", "^INDIAVIX": "INDIAVIX"}[sym]
         write("daily/%s-1y-1d.json" % fname, chart(sym, rows, rows[-2][4], "1y", gran="1d", name=name))
 
+    # index options: NIFTY 50 and SENSEX intraday spot, and a Kite get_quotes answer for each chain
+    import importlib.util
+    spec_ = importlib.util.spec_from_file_location("fno_core", os.path.join(os.path.dirname(HERE), "nse-fno-chain",
+                                                                           "fno_core.py"))
+    F = importlib.util.module_from_spec(spec_)
+    spec_.loader.exec_module(F)
+    orng = random.Random(7)
+    plan_day = datetime.date(2026, 11, 2)                      # Monday; NIFTY expires Tue 3 Nov, SENSEX Thu 5 Nov
+    for idx, ysym, base, expiry in (("NIFTY", "^NSEI", 25780.0, datetime.date(2026, 11, 3)),
+                                    ("SENSEX", "^BSESN", 84150.0, datetime.date(2026, 11, 5))):
+        # spot: a 15-minute range, then a close above it on the 9:35 bar
+        bars, prev = [], base
+        for i in range(BARS):
+            o = prev
+            c = base * (1 + (0.0004, -0.0003, 0.0002, 0.0002, 0.0005, 0.0016)[i]) if i < 6 else \
+                o * (1 + orng.gauss(0.00005, 0.0006))
+            h, lo = max(o, c) * (1 + abs(orng.gauss(0, 0.0002))), min(o, c) * (1 - abs(orng.gauss(0, 0.0002)))
+            bars.append((ts(plan_day, i), round(o, 2), round(h, 2), round(lo, 2), round(c, 2), 0))
+            prev = c
+        cut = [b for b in bars if b[0] + 300 <= ts(plan_day, 6)]           # data to 09:45
+        write("fno/%s.json" % ysym, chart(ysym, cut, base * 0.998, "1d", name=F.INDICES[idx]["name"]))
+        # the chain at 09:45 on the plan day, priced by Black-Scholes on a volatility smile
+        sp = cut[-1][4]
+        now = datetime.datetime.combine(plan_day, datetime.time(9, 45)) - IST
+        t = F.years_to_expiry(now, expiry)
+        step = F.INDICES[idx]["step"]
+        mid = F.atm(sp, step)
+        quotes = {}
+        for k in range(-12, 13):
+            strike = mid + k * step
+            for right in ("CE", "PE"):
+                iv = 0.12 + 0.000004 * ((strike - sp) / step * 10) ** 2 / 10 + (0.01 if right == "PE" and strike < sp else 0)
+                px = F.bs_price(right, sp, strike, t, 0.065, iv)
+                px = max(0.05, round(px * 20) / 20)
+                sprd = max(0.05, round(px * (0.004 if abs(k) <= 6 else 0.03) * 20) / 20)
+                oi = int(1e6 * (1.6 if (right == "CE" and k == 4) or (right == "PE" and k == -4) else 1.0)
+                         * max(0.15, 1 - abs(k) / 14.0) * orng.uniform(0.85, 1.15))
+                sym = F.tradingsymbol(idx, expiry, strike, right)
+                quotes["%s:%s" % (F.INDICES[idx]["exchange"], sym)] = {
+                    "instrument_token": 1000000 + len(quotes), "last_price": px, "volume": int(oi * 3.1), "oi": oi,
+                    "ohlc": {"open": px, "high": px * 1.2, "low": px * 0.8, "close": px},
+                    "depth": {"buy": [{"price": round(max(0.05, px - sprd / 2) * 20) / 20, "quantity": 1300, "orders": 9}],
+                              "sell": [{"price": round((px + sprd / 2) * 20) / 20, "quantity": 1200, "orders": 7}]}}
+        write("fno/quotes-%s.json" % idx, {"data": quotes})
+
     # quotes for alerts
     for sym in ("DEMO", "FLAT"):
         c = json.load(open(os.path.join(OUT, "charts", "%s.json" % sym), encoding="utf-8"))

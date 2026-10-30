@@ -189,8 +189,8 @@ class Deals(Tmp):
 
 
 class Repo(unittest.TestCase):
-    def test_fourteen_skills_with_matching_names(self):
-        self.assertEqual(len(SKILLS), 14)
+    def test_sixteen_skills_with_matching_names(self):
+        self.assertEqual(len(SKILLS), 16)
         for s in SKILLS:
             with open(os.path.join(ROOT, s, "SKILL.md"), encoding="utf-8") as fh:
                 text = fh.read()
