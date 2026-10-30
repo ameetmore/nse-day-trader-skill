@@ -66,7 +66,8 @@ Other flags: `--limit N`, `--watchlist FILE`, `--min-price` (₹50), `--min-volu
    Point out anything stuck near its upper circuit or on an ASM/GSM
    surveillance list if the user mentions it: those can halt or demand 100%
    margin.
-4. Hand off: `/nse-news SYMBOL` for why it moves, then `/nse-entry SYMBOL`.
+4. Hand off: `/nse-news SYMBOL` for why it moves, `/nse-research SYMBOL` for a
+   full committee view if there is time, then `/nse-entry SYMBOL`.
 
 ## Example (offline fixtures, synthetic prices)
 

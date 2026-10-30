@@ -22,7 +22,12 @@ python3 "${CLAUDE_SKILL_DIR}/facts.py" RELIANCE
 python3 "${CLAUDE_SKILL_DIR}/facts.py" TCS INFY --quarters 8
 python3 "${CLAUDE_SKILL_DIR}/facts.py" HDFCBANK --json
 python3 "${CLAUDE_SKILL_DIR}/facts.py" RELIANCE TCS INFY --metrics trader/metrics.json
+python3 "${CLAUDE_SKILL_DIR}/facts.py" RELIANCE --as-of 2026-10-15   # only quarters due by then
 ```
+
+`--as-of` keeps a quarter only once SEBI's results deadline has passed (45
+days after the quarter, 60 for March), so a past-dated analysis never sees
+later results; a company that filed early is still left out until then.
 
 ## Sources and caveats
 

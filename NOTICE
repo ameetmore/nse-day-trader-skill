@@ -1,0 +1,22 @@
+NSE Day Trader skill
+Copyright (c) 2026 ameetmore
+
+This product includes work adapted from:
+
+1. Day Trader skill, Copyright (c) 2026 Jake Schincariol, MIT License
+   https://github.com/Jakeschincariol/day-trader-skill
+   The eleven trading skills' tools and pipeline, ported to NSE/BSE
+   (see LICENSE).
+
+2. TradingAgents, Copyright Tauric Research, Apache License 2.0
+   https://github.com/TauricResearch/TradingAgents
+   The research committee's design (analyst team; bull and bear debate with a
+   research manager; trader; aggressive / conservative / neutral risk debate;
+   portfolio manager), the five-tier rating scale, the rule that an unreadable
+   rating is a REVIEW rather than a Hold, the decision memory that settles calls
+   against a benchmark and feeds lessons back, point-in-time analysis, and a
+   verified indicator snapshot. Changes: rewritten from scratch for Claude
+   skills (no LLM framework or API keys), Indian markets, the standard library
+   only, and this pack's own data tools; role briefs written anew. The
+   Apache License 2.0 text is in THIRD_PARTY/TradingAgents-LICENSE.
+   Files: nse-research/, nse-journal/, nse-technicals/.

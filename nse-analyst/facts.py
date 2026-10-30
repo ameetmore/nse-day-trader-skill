@@ -26,7 +26,9 @@ NBFCs report revenue and operating profit differently: their margins can be
 blank or not comparable with an industrial company's. When a number matters,
 read it in the NSE filing. Amounts print in ₹ crore (1 crore = 10 million).
 
---metrics FILE merges one row per symbol into a JSON file (TTM revenue, net
+--as-of DATE keeps only quarters whose results were due by that date (45 days
+after the quarter, 60 for March), so a past-dated analysis cannot see later
+results. --metrics FILE merges one row per symbol into a JSON file (TTM revenue, net
 profit and EPS, margins, growth). Offline: --offline DIR reads
 timeseries-<SYMBOL>.json and nse-results.xml from DIR.
 
@@ -156,6 +158,24 @@ def parse_series(data, sym):
         raise FactsError("Yahoo has no quarterly figures for %s (a small or new listing, or a wrong symbol)"
                          % sym)
     return quarters, currency or "INR"
+
+
+def known_by(quarters, as_of):
+    """Point in time: only quarters whose results were due by as_of. SEBI's listing rules give
+    45 days after a quarter's end (60 for the March quarter, the annual results), so a quarter
+    counts once that deadline is past. Nothing published later leaks into an as-of view."""
+    day = datetime_date(as_of)
+    out = {}
+    for d, v in quarters.items():
+        qe = datetime_date(d)
+        lag = 60 if qe.month == 3 else 45
+        if qe + _dt.timedelta(days=lag) <= day:
+            out[d] = v
+    return out
+
+
+def datetime_date(s):
+    return _dt.date.fromisoformat(str(s)[:10])
 
 
 def build_quarters(quarters, n):
@@ -328,6 +348,7 @@ def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     ap.add_argument("tickers", nargs="*", help="NSE symbols, e.g. RELIANCE TCS")
     ap.add_argument("--quarters", type=int, default=6)
+    ap.add_argument("--as-of", help="YYYY-MM-DD: only quarters whose results were due by then (point in time)")
     ap.add_argument("--no-filings", action="store_true", help="skip the NSE results-filing lookup")
     ap.add_argument("--metrics", metavar="FILE", help="merge a row per symbol into this JSON")
     ap.add_argument("--universe", default="trader/universe.txt", help="SYMBOL|Name lines, for company names")
@@ -360,6 +381,12 @@ def main(argv=None):
             print("facts.py: %s: %s" % (sym, exc), file=sys.stderr)
             rc = 1
             continue
+        if a.as_of:
+            quarters = known_by(quarters, a.as_of)
+            if not quarters:
+                print("facts.py: %s: no quarter was reported by %s" % (sym, a.as_of), file=sys.stderr)
+                rc = 1
+                continue
         rows = build_quarters(quarters, a.quarters)
         rows_by[sym] = rows
         filing = latest_filing(filings, sym, names.get(sym)) if filings else None

@@ -92,6 +92,8 @@ a simulated fill in `trader/portfolio.json`. Nothing goes to Kite. Live
 5. By 15:10, if anything is still open: `ticket.py flatten`, then
    `/nse-risk`, then a yes. Cancel the open exit orders before the flatten
    sell. Zerodha's own auto square-off (15:12 or 15:25) costs ₹50 + GST.
+6. When the trade is closed, record it: `/nse-journal` (`journal.py trade
+   --pnl NET --r R`), net of costs, and write its one-paragraph lesson.
 
 ## What it never does
 

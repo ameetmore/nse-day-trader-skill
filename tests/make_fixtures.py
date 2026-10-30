@@ -144,6 +144,30 @@ def main():
     write("scanner/spark-5m-2026-10-29.json", {"spark": {"result": spark5, "error": None}})
     write("scanner/spark-3mo-2026-10-28.json", {"spark": {"result": spark1d, "error": None}})
 
+    # daily bars, about a year, for nse-technicals and nse-journal: DEMO, NIFTY 50, India VIX
+    drng = random.Random(99)
+    ddays = trading_days(PLAN_DAY, 250)
+    for sym, p0, drift, vol, name in (("DEMO.NS", 1000.0, 0.0012, 0.015, "Demo Industries Ltd"),
+                                      ("^NSEI", 24000.0, 0.0004, 0.008, "NIFTY 50"),
+                                      ("^INDIAVIX", 13.0, 0.0, 0.04, "India VIX")):
+        rows, p = [], p0
+        for d in ddays:
+            o = p * (1 + drng.gauss(0, vol / 3))
+            c = o * (1 + drng.gauss(drift, vol))
+            if sym == "^INDIAVIX":
+                c = max(9.0, min(30.0, c))
+            h = max(o, c) * (1 + abs(drng.gauss(0, vol / 2)))
+            lo = min(o, c) * (1 - abs(drng.gauss(0, vol / 2)))
+            v = 0 if sym.startswith("^") else int(drng.uniform(4e5, 1.6e6))
+            rows.append((ts(d, 0), round(o, 2), round(h, 2), round(lo, 2), round(c, 2), v))
+            p = c
+        if sym == "DEMO.NS":   # end the year where the intraday DEMO fixture closes, so they agree
+            f = today[-1][4] / rows[-1][4]
+            rows = [(r[0], round(r[1] * f, 2), round(r[2] * f, 2), round(r[3] * f, 2), round(r[4] * f, 2), r[5])
+                    for r in rows]
+        fname = {"DEMO.NS": "DEMO", "^NSEI": "NSEI", "^INDIAVIX": "INDIAVIX"}[sym]
+        write("daily/%s-1y-1d.json" % fname, chart(sym, rows, rows[-2][4], "1y", gran="1d", name=name))
+
     # quotes for alerts
     for sym in ("DEMO", "FLAT"):
         c = json.load(open(os.path.join(OUT, "charts", "%s.json" % sym), encoding="utf-8"))

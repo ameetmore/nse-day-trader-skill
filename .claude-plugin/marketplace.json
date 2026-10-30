@@ -1,7 +1,7 @@
 {
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
   "name": "nse-day-trader-skill",
-  "description": "The Day Trader skill pack for Indian markets (NSE/BSE), adapted from Jake Schincariol's Day Trader skill",
+  "description": "The Day Trader skill pack for Indian markets (NSE/BSE), combining Jake Schincariol's Day Trader skill with TradingAgents' research committee",
   "owner": {
     "name": "ameetmore",
     "url": "https://github.com/ameetmore"
@@ -9,7 +9,7 @@
   "plugins": [
     {
       "name": "nse-day-trader-skill",
-      "description": "Eleven Claude skills for intraday trading on NSE/BSE: a chart scanner (NIFTY 500 or every EQ stock), a news monitor with NSE filings, an entry timer, an exit planner on NSE's tick grid, a time machine that replays 10,000 sessions, a risk manager, a budget manager with Indian trading costs, a Zerodha Kite order executor (paper by default, never without your yes), price alerts on the NSE clock, an earnings analyst and a bulk and block deals tracker.",
+      "description": "Fourteen Claude skills for trading NSE/BSE: a TradingAgents-style research committee (analysts, bull vs bear, risk debate, Buy-to-Sell rating), a decision journal scored against NIFTY, a technical-indicator snapshot, a chart scanner (NIFTY 500 or every EQ stock), a news monitor with NSE filings, an entry timer, an exit planner on NSE's tick grid, a time machine that replays 10,000 sessions, a risk manager, a budget manager with Indian trading costs, a Zerodha Kite order executor (paper by default, never without your yes), price alerts on the NSE clock, an earnings analyst and a bulk and block deals tracker.",
       "source": "./",
       "category": "productivity",
       "homepage": "https://github.com/ameetmore/nse-day-trader-skill"

@@ -1,9 +1,10 @@
 # The NSE Day Trader skill
 
-11 Claude skills for intraday trading on India's NSE and BSE: scan NIFTY charts
-for setups, track NSE filings and news, time every entry and exit on NSE's tick
-grid, size every trade after Indian trading costs, and replay every outcome
-before you risk a rupee.
+14 Claude skills for trading India's NSE and BSE: scan NIFTY charts for
+setups, convene a research committee that argues bull against bear before it
+commits to a rating, time every entry and exit on NSE's tick grid, size every
+trade after Indian trading costs, replay every outcome before you risk a rupee,
+and keep a journal that scores every call against NIFTY and learns from it.
 
 Free, MIT, no signup, no API key for the analysis. The tools are plain Python
 (standard library only) that read free public data: NSE's own lists, RSS feeds
@@ -12,10 +13,13 @@ and bulk/block deal files, and Yahoo Finance `.NS` charts.
 And no order goes through until you say yes. Nothing in this pack can place an
 order on its own. Paper trading is the default.
 
-> Adapted for India from Jake Schincariol's
-> [Day Trader skill](https://github.com/Jakeschincariol/day-trader-skill)
-> (MIT), which is built for US stocks. Same pipeline and safety gates, rebuilt
-> for the NSE clock, rupees, Indian costs, NSE filings and Zerodha Kite.
+> Built from two open-source projects: Jake Schincariol's
+> [Day Trader skill](https://github.com/Jakeschincariol/day-trader-skill) (MIT,
+> US intraday execution with strict safety gates), rebuilt for the NSE clock,
+> rupees, Indian costs, NSE filings and Zerodha Kite; and Tauric Research's
+> [TradingAgents](https://github.com/TauricResearch/TradingAgents) (Apache-2.0,
+> a multi-agent research committee with memory), whose design is re-made here
+> as Claude skills that need no extra model or API key. See NOTICE.
 
 ## Before you start
 
@@ -52,7 +56,7 @@ Python 3.8 or newer. Nothing to pip install. Then copy
 `nse-budget/config.example.json` to `trader/config.json` in your project and
 set your budget and limits in rupees.
 
-## The eleven
+## The fourteen
 
 | command | job | what it does |
 | --- | --- | --- |
@@ -67,6 +71,9 @@ set your budget and limits in rupees.
 | `/nse-alerts` | Price Alerts | Rings on the stop, the target, a % move, the opening bell and the 15:10 flat-by. |
 | `/nse-analyst` | Earnings Analyst | Quarterly revenue, margins, net profit and EPS in ₹ crore, Indian fiscal quarters, plus the NSE results filing. |
 | `/nse-deals` | Deals Tracker | NSE's daily bulk and block deals: who bought and sold big, net by stock, flags your stocks. |
+| `/nse-technicals` | Technical Analyst | Daily SMA 50/200, EMA 10, MACD, RSI, Bollinger, ATR, VWMA and the 52-week range as one verified snapshot; NIFTY and India VIX regime; point in time. |
+| `/nse-research` | Research Committee | Four analysts, a bull vs bear debate, a research manager, a trader, an aggressive / conservative / neutral risk debate and a portfolio manager's Buy-to-Sell rating, grounded in the pack's own data. |
+| `/nse-journal` | Decision Journal | Records every rating and trade, scores each call against NIFTY once its window has traded, keeps a lesson for it, and feeds the lessons back. |
 
 ## How it fits together
 
@@ -74,10 +81,38 @@ Everything lands in a `trader/` folder in your project, and each skill reads
 what the last one wrote:
 
 ```
-scanner -> news -> entry -> exit -> timemachine -> budget -> risk -> broker   (one trade)
-alerts: stop, target, flat by 15:10                                           (while it is open)
-news / analyst / deals                                                         (on a schedule)
+scanner -> research (technicals, analyst, news, deals, journal lessons) -> rating   (should I?)
+scanner -> news -> entry -> exit -> timemachine -> budget -> risk -> broker         (one trade)
+alerts: stop, target, flat by 15:10                                                 (while it is open)
+journal: settle every call against NIFTY, write the lesson, keep the scorecard      (after)
+news / analyst / deals / journal settle                                             (on a schedule)
 ```
+
+## The research committee
+
+Ask `/nse-research RELIANCE` and Claude convenes the committee TradingAgents
+describes, sitting in every seat in turn:
+
+1. **Evidence first.** `research.py gather` runs the pack's own tools: the
+   indicator snapshot and NIFTY / India VIX regime, the quarters in rupees crore,
+   72 hours of headlines and NSE filings, the bulk and block deals, and the
+   journal's lessons on this stock. Every number in the report must come from
+   that bundle; a missing part stays missing.
+2. **Four analysts** (technical, fundamentals, news and events, flows and
+   sentiment), in parallel when subagents are available.
+3. **Bull vs bear**, two rounds, each answering the other's last point with a
+   number. A **research manager** commits to the stronger side.
+4. **A trader** turns it into a plan (horizon, entry zone, ATR-based stop, size).
+5. **Aggressive, conservative and neutral** risk views argue; a **portfolio
+   manager** gives the final rating: Buy, Overweight, Hold, Underweight or Sell.
+6. `research.py save` checks every section and the single rating line, files
+   the report and records it in the journal. Five trading days later
+   `journal.py settle` scores it against NIFTY, and the lesson written then is
+   read back before the next call on that stock.
+
+`--as-of 2026-10-15` runs the committee as of a past close: no later bar,
+filing or quarter can leak in. Run it on several past dates and the journal's
+scorecard becomes an honest, if small, backtest.
 
 ## An example trade
 
@@ -104,6 +139,26 @@ stock, DEMO, built by `tests/make_fixtures.py`), Thursday 29 October 2026:
    (MARKET entry, then SL-M stop and LIMIT target once it fills). You type yes
    for that exact order. In paper mode the fill is recorded locally.
 9. **`/nse-alerts`**: rings on the stop, the target and at 15:10.
+
+## What came from where
+
+| | Day Trader skill (US) | TradingAgents | this pack |
+| --- | --- | --- | --- |
+| What it is | Claude skills for intraday execution | Python multi-agent LLM framework | Claude skills for both |
+| Runs on | Claude, standard-library Python | LangGraph + your own LLM API keys | Claude, standard-library Python, no keys |
+| Market | US | mostly US (any Yahoo ticker) | NSE/BSE |
+| Research | scanner and news | 4 analysts, bull/bear debate, risk debate, PM rating | the committee, on the pack's own data |
+| Indicators | ORB, simple daily setups | SMA, EMA, MACD, RSI, Bollinger, ATR, VWMA via stockstats | both: ORB scans plus a verified daily snapshot |
+| Memory | none | decision log, settled vs a benchmark, reflections | journal settled vs NIFTY, lessons, scorecard |
+| Look-ahead guard | n/a | point-in-time data paths | `--as-of` on technicals, analyst, news and research |
+| Execution | three gates, paper by default, Alpaca | none (a rating only) | three gates, paper by default, Zerodha Kite |
+| Costs, sizing, risk rules | yes (US: no commissions) | no | yes, with Indian costs |
+| Horizon | one session | days to weeks | intraday trades, and rated views scored over days |
+
+Left out on purpose: TradingAgents' Reddit/StockTwits sentiment and FRED macro
+feeds (US sources with no clean free Indian equivalent; flows from bulk and
+block deals stand in), its choice of LLM providers (Claude is the model), and
+its HTML report (the report is markdown, saved and scored).
 
 ## What is different from the US version
 
@@ -146,10 +201,14 @@ python3 nse-broker/ticket.py show                                   # the Kite t
 python3 nse-alerts/alerts.py add --from-plan                        # stop, target, flat by 15:10
 python3 nse-analyst/facts.py RELIANCE                               # quarters, growth, EPS
 python3 nse-deals/deals.py --watch                                  # bulk and block deals in your stocks
+python3 nse-technicals/indicators.py snapshot RELIANCE              # the verified indicator snapshot
+python3 nse-technicals/indicators.py regime                         # NIFTY 50 trend + India VIX
+python3 nse-research/research.py gather RELIANCE                    # the committee's evidence bundle
+python3 nse-journal/journal.py settle && python3 nse-journal/journal.py score
 ```
 
 ```bash
-python3 -m unittest discover -s tests -v      # 52 tests, offline
+python3 -m unittest discover -s tests -v      # 68 tests, offline
 python3 tests/make_fixtures.py                # rebuild the synthetic fixtures
 ```
 
@@ -184,4 +243,7 @@ any strategy makes money.
 
 ## License
 
-MIT. Original work © 2026 Jake Schincariol; NSE/BSE adaptation © 2026 ameetmore.
+MIT (LICENSE). Original Day Trader skill © 2026 Jake Schincariol; NSE/BSE
+adaptation and the combined pack © 2026 ameetmore. The research committee,
+journal and technicals adapt the design of TradingAgents by Tauric Research
+(Apache-2.0; THIRD_PARTY/TradingAgents-LICENSE and NOTICE).
