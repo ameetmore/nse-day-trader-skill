@@ -99,8 +99,10 @@ news / analyst / deals / journal settle                                         
 
 `ui/index.html` is a one-page web desk for the pack: the NIFTY/SENSEX option planner,
 an option-chain reader (paste Kite's get_quotes answer), the equity sizer with Indian costs,
-the expiry calendar, and a viewer for `trader/journal.json` and `trader/orders.json`. Open
-the file in any browser; it needs no server and sends nothing anywhere. It has no live prices:
+the expiry calendar, and a viewer for `trader/journal.json` and `trader/orders.json`. Run
+it on your own computer with `py ui\serve.py` (Windows) or `python3 ui/serve.py`: it serves
+on http://127.0.0.1:8765, reachable only from this computer, and opens your browser. You can
+also double-click `ui/index.html`. It sends nothing anywhere. It has no live prices:
 those come from Kite through the Python tools.
 
 ## Index options: NIFTY 50 and SENSEX
