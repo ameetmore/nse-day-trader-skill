@@ -1,0 +1,510 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font-size:14px}img{max-width:100%}[hidden]{display:none!important}</style>
+</head>
+<body>
+<title>NSE Trading Desk</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700;800&family=Source+Sans+3:wght@400;600&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: a desk with a tab rail on top; each tab is one working panel (inputs left, results right), stacking on phones. */
+:root{
+  --bg:#f3f4f7; --panel:#ffffff; --ink:#151c33; --muted:#5b6380; --line:#dfe2ea;
+  --accent:#d9860b; --accent-ink:#ffffff; --accent-soft:#fdf1dc;
+  --ce:#0f7a4b; --pe:#b8322a; --warn:#9a5b00; --warn-bg:#fff4dd; --bad-bg:#fde8e6; --good-bg:#e3f4ea;
+  --code:#eef0f5;
+  --f-display:"Archivo","Arial Narrow",Arial,sans-serif;
+  --f-body:"Source Sans 3","Segoe UI",system-ui,sans-serif;
+  --f-mono:"JetBrains Mono",ui-monospace,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0e121c; --panel:#161c2a; --ink:#e7eaf3; --muted:#9aa3bd; --line:#283047;
+  --accent:#f0a33a; --accent-ink:#1a1204; --accent-soft:#3a2a10;
+  --ce:#4fcf8f; --pe:#ff7b70; --warn:#f0b35a; --warn-bg:#352812; --bad-bg:#3a1a18; --good-bg:#14301f; --code:#0f1420;
+  color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0e121c; --panel:#161c2a; --ink:#e7eaf3; --muted:#9aa3bd; --line:#283047;
+  --accent:#f0a33a; --accent-ink:#1a1204; --accent-soft:#3a2a10;
+  --ce:#4fcf8f; --pe:#ff7b70; --warn:#f0b35a; --warn-bg:#352812; --bad-bg:#3a1a18; --good-bg:#14301f; --code:#0f1420;
+  color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.5}
+.wrap{max-width:1180px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 48px}
+header.top{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px 24px;border-bottom:2px solid var(--ink);padding-bottom:12px}
+.brand h1{font-family:var(--f-display);font-weight:800;font-size:clamp(26px,4vw,36px);letter-spacing:-.01em;margin:0;line-height:1.05;text-wrap:balance}
+.brand p{margin:4px 0 0;color:var(--muted);max-width:62ch}
+.clock{font-family:var(--f-mono);font-size:13px;text-align:right;color:var(--muted)}
+.clock b{display:block;font-size:20px;color:var(--ink);font-weight:600}
+.pill{display:inline-block;font-family:var(--f-display);font-weight:700;font-size:11px;letter-spacing:.08em;text-transform:uppercase;padding:2px 8px;border-radius:3px}
+.pill.open{background:var(--good-bg);color:var(--ce)} .pill.closed{background:var(--bad-bg);color:var(--pe)}
+nav.tabs{display:flex;gap:4px;flex-wrap:wrap;margin:16px 0 18px}
+nav.tabs a{font-family:var(--f-display);font-weight:700;font-size:13px;letter-spacing:.06em;text-transform:uppercase;text-decoration:none;color:var(--muted);padding:8px 12px;border:1px solid transparent;border-radius:4px}
+nav.tabs a:hover{color:var(--ink);border-color:var(--line)}
+nav.tabs a[aria-current="page"]{background:var(--ink);color:var(--bg)}
+nav.tabs a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.notice{border-left:4px solid var(--pe);background:var(--bad-bg);padding:10px 14px;margin-bottom:18px;font-size:14px}
+.notice b{color:var(--pe)}
+.grid{display:grid;grid-template-columns:minmax(0,340px) minmax(0,1fr);gap:20px;align-items:start}
+@media (max-width:860px){.grid{grid-template-columns:minmax(0,1fr)}}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:16px 18px;min-width:0}
+.panel h2{font-family:var(--f-display);font-weight:800;font-size:15px;letter-spacing:.06em;text-transform:uppercase;margin:0 0 12px}
+.panel h3{font-family:var(--f-display);font-weight:700;font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:18px 0 8px}
+form .row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+label{display:flex;flex-direction:column;gap:3px;font-size:12px;font-weight:600;color:var(--muted);letter-spacing:.02em;margin-bottom:10px}
+input,select,textarea{font:inherit;font-size:15px;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:4px;padding:7px 9px;width:100%}
+input[type=number]{font-family:var(--f-mono);font-size:14px}
+textarea{font-family:var(--f-mono);font-size:12px;min-height:120px}
+.seg{display:flex;border:1px solid var(--line);border-radius:4px;overflow:hidden;margin-bottom:10px}
+.seg button{flex:1;font:inherit;font-family:var(--f-display);font-weight:700;font-size:13px;letter-spacing:.05em;text-transform:uppercase;padding:8px;border:0;background:var(--bg);color:var(--muted);cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
+.seg button.ce[aria-pressed="true"]{background:var(--ce);color:#fff}
+.seg button.pe[aria-pressed="true"]{background:var(--pe);color:#fff}
+button.act{font-family:var(--f-display);font-weight:700;font-size:13px;letter-spacing:.05em;text-transform:uppercase;background:var(--accent);color:var(--accent-ink);border:0;border-radius:4px;padding:9px 14px;cursor:pointer}
+button.ghost{font:inherit;font-size:13px;background:transparent;border:1px solid var(--line);color:var(--ink);border-radius:4px;padding:6px 10px;cursor:pointer}
+.hint{font-size:12px;color:var(--muted);margin:-4px 0 10px}
+.figs{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:6px;overflow:hidden;margin-bottom:16px}
+.fig{background:var(--panel);padding:10px 12px;min-width:0}
+.fig span{display:block;font-family:var(--f-display);font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.fig b{display:block;font-family:var(--f-mono);font-size:20px;font-weight:600;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.fig small{color:var(--muted);font-size:12px}
+.fig.loss b{color:var(--pe)} .fig.gain b{color:var(--ce)}
+.ticket{border:1px dashed var(--line);border-radius:6px;padding:12px 14px;margin-bottom:14px}
+.ticket .sym{font-family:var(--f-mono);font-weight:600;font-size:16px}
+.legs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:10px}
+@media (max-width:600px){.legs{grid-template-columns:minmax(0,1fr)}}
+.leg{background:var(--code);border-radius:4px;padding:8px 10px;font-family:var(--f-mono);font-size:12px;min-width:0}
+.leg em{display:block;font-style:normal;font-family:var(--f-display);font-weight:700;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:4px}
+.msgs{display:flex;flex-direction:column;gap:6px;margin:10px 0}
+.msg{font-size:13px;padding:6px 10px;border-radius:4px}
+.msg.warn{background:var(--warn-bg);color:var(--warn)} .msg.bad{background:var(--bad-bg);color:var(--pe)} .msg.ok{background:var(--good-bg);color:var(--ce)}
+.tbl{overflow-x:auto;border:1px solid var(--line);border-radius:6px}
+table{border-collapse:collapse;width:100%;font-family:var(--f-mono);font-size:12.5px;font-variant-numeric:tabular-nums}
+th,td{padding:5px 8px;text-align:right;white-space:nowrap;border-bottom:1px solid var(--line)}
+th{font-family:var(--f-display);font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);background:var(--panel);position:sticky;top:0}
+td.k{text-align:center;font-weight:600;background:var(--code)}
+tr.atm td{background:var(--accent-soft)}
+tr.atm td.k{background:var(--accent);color:var(--accent-ink)}
+td.itm-ce{background:color-mix(in srgb,var(--ce) 8%,transparent)} td.itm-pe{background:color-mix(in srgb,var(--pe) 8%,transparent)}
+td.thin{color:var(--muted);text-decoration:line-through}
+tbody tr{cursor:pointer} tbody tr:hover td{outline:1px solid var(--line)}
+pre.cmd{background:var(--code);border-radius:4px;padding:10px 12px;font-family:var(--f-mono);font-size:12.5px;overflow-x:auto;margin:0 0 10px}
+.cal{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:16px}
+.cal ol{list-style:none;margin:0;padding:0}
+.cal li{display:flex;justify-content:space-between;gap:8px;padding:7px 0;border-bottom:1px solid var(--line);font-family:var(--f-mono);font-size:13px}
+.cal li .tag{font-family:var(--f-display);font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase}
+.cal li .tag.m{color:var(--accent)} .cal li .tag.h{color:var(--pe)}
+.prose{max-width:68ch} .prose p{margin:0 0 10px}
+.copyrow{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:8px}
+.foot{margin-top:28px;color:var(--muted);font-size:13px;border-top:1px solid var(--line);padding-top:12px}
+.foot a,.prose a{color:var(--accent)}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<div class="wrap">
+<header class="top">
+  <div class="brand">
+    <h1>NSE Trading Desk</h1>
+    <p>The NSE Day Trader skill pack, in your browser: plan NIFTY and SENSEX option buys, read an option chain, size equity trades after Indian costs, and review your journal.</p>
+  </div>
+  <div class="clock" aria-live="polite"><b id="clk">--:--</b><span id="mkt"></span></div>
+</header>
+
+<nav class="tabs" aria-label="Desk sections">
+  <a href="#options">Option planner</a>
+  <a href="#chain">Option chain</a>
+  <a href="#equity">Equity sizer</a>
+  <a href="#expiries">Expiries</a>
+  <a href="#journal">Journal &amp; orders</a>
+  <a href="#run">Run the pack</a>
+</nav>
+
+<div class="notice"><b>87.7% of individual F&amp;O traders lost money in FY2025-26</b> (SEBI study). This desk does arithmetic, not advice: it never places an order and has no live prices. Live quotes come from Zerodha Kite through the pack's Python tools; type or paste them here.</div>
+
+<!-- ============ OPTION PLANNER ============ -->
+<section id="v-options" class="view" hidden>
+<div class="grid">
+  <form class="panel" id="optForm" autocomplete="off">
+    <h2>One bought option</h2>
+    <div class="seg" role="group" aria-label="Index">
+      <button type="button" data-idx="NIFTY" aria-pressed="true">NIFTY 50</button>
+      <button type="button" data-idx="SENSEX" aria-pressed="false">SENSEX</button>
+    </div>
+    <div class="seg" role="group" aria-label="Direction">
+      <button type="button" class="ce" data-dir="up" aria-pressed="true">Up · buy CE</button>
+      <button type="button" class="pe" data-dir="down" aria-pressed="false">Down · buy PE</button>
+    </div>
+    <div class="row">
+      <label for="o_spot">Index now<input id="o_spot" type="number" step="0.05" value="25792.90"></label>
+      <label for="o_exp">Expiry<select id="o_exp"></select></label>
+    </div>
+    <div class="row">
+      <label for="o_ie">Index entry<input id="o_ie" type="number" step="0.05" value="25792.90"></label>
+      <label for="o_is">Index stop<input id="o_is" type="number" step="0.05" value="25770.00"></label>
+    </div>
+    <div class="row">
+      <label for="o_tr">Target (x index risk)<input id="o_tr" type="number" step="0.1" value="2"></label>
+      <label for="o_iv">Implied vol %<input id="o_iv" type="number" step="0.1" value="12.5"></label>
+    </div>
+    <div class="row">
+      <label for="o_rule">Strike<select id="o_rule"><option value="delta:0.55">Delta ≈ 0.55</option><option value="atm">ATM</option><option value="itm1">1 in the money</option><option value="otm1">1 out of the money</option></select></label>
+      <label for="o_ask">Ask (optional)<input id="o_ask" type="number" step="0.05" placeholder="model price"></label>
+    </div>
+    <div class="row">
+      <label for="o_time">Time (IST)<input id="o_time" type="time" value="09:45"></label>
+      <label for="o_date">Date<input id="o_date" type="date"></label>
+    </div>
+    <h3>Your limits</h3>
+    <div class="row">
+      <label for="o_ml">Max loss / trade ₹<input id="o_ml" type="number" step="100" value="2500"></label>
+      <label for="o_lots">Max lots<input id="o_lots" type="number" step="1" value="2"></label>
+    </div>
+    <div class="row">
+      <label for="o_prem">Premium cap ₹<input id="o_prem" type="number" step="1000" value="30000"></label>
+      <label for="o_buf">SL limit buffer %<input id="o_buf" type="number" step="0.5" value="2"></label>
+    </div>
+    <p class="hint">Lot, expiry weekday and freeze limit follow the index: NIFTY 65 / Tuesday / 3,510; SENSEX 20 / Thursday.</p>
+  </form>
+  <div class="panel" id="optOut" aria-live="polite"></div>
+</div>
+</section>
+
+<!-- ============ CHAIN ============ -->
+<section id="v-chain" class="view" hidden>
+<div class="grid">
+  <form class="panel" id="chForm" autocomplete="off">
+    <h2>Option chain</h2>
+    <div class="seg" role="group" aria-label="Index">
+      <button type="button" data-cidx="NIFTY" aria-pressed="true">NIFTY 50</button>
+      <button type="button" data-cidx="SENSEX" aria-pressed="false">SENSEX</button>
+    </div>
+    <div class="row">
+      <label for="c_spot">Index now<input id="c_spot" type="number" step="0.05" value="25792.90"></label>
+      <label for="c_time">Time (IST)<input id="c_time" type="time" value="09:45"></label>
+    </div>
+    <label for="c_date">Date<input id="c_date" type="date"></label>
+    <label for="c_json">Kite get_quotes answer (JSON)<textarea id="c_json" spellcheck="false" placeholder='{"NFO:NIFTY26N0325800CE": {"last_price": 86.3, "oi": 956135, "depth": {...}}, ...}'></textarea></label>
+    <div class="copyrow">
+      <button type="button" class="act" id="c_go">Analyse</button>
+      <label for="c_file" style="margin:0"><span class="ghost" style="display:inline-block;border:1px solid var(--line);border-radius:4px;padding:6px 10px;color:var(--ink);font-size:13px;font-weight:400;cursor:pointer">Open file…</span><input id="c_file" type="file" accept=".json,application/json" hidden></label>
+      <button type="button" class="ghost" id="c_sample">Load sample</button>
+    </div>
+    <p class="hint" style="margin-top:10px">Ask Claude: “get the NIFTY chain from Kite and save it”, or run <code>chain.py symbols NIFTY --spot …</code> and pass the list to Kite's get_quotes. The sample is synthetic.</p>
+  </form>
+  <div class="panel" id="chOut" aria-live="polite"></div>
+</div>
+</section>
+
+<!-- ============ EQUITY ============ -->
+<section id="v-equity" class="view" hidden>
+<div class="grid">
+  <form class="panel" id="eqForm" autocomplete="off">
+    <h2>Intraday equity size</h2>
+    <label for="e_sym">Symbol<input id="e_sym" value="RELIANCE"></label>
+    <div class="row">
+      <label for="e_entry">Entry ₹<input id="e_entry" type="number" step="0.05" value="1409.49"></label>
+      <label for="e_stop">Stop ₹<input id="e_stop" type="number" step="0.05" value="1405.60"></label>
+    </div>
+    <div class="row">
+      <label for="e_tr">Target (R)<input id="e_tr" type="number" step="0.5" value="1"></label>
+      <label for="e_budget">Budget ₹<input id="e_budget" type="number" step="10000" value="500000"></label>
+    </div>
+    <div class="row">
+      <label for="e_ml">Max loss / trade ₹<input id="e_ml" type="number" step="100" value="2500"></label>
+      <label for="e_cap">Position cap %<input id="e_cap" type="number" step="5" value="75"></label>
+    </div>
+    <div class="row">
+      <label for="e_buf">Cash buffer %<input id="e_buf" type="number" step="1" value="10"></label>
+      <label for="e_lev">MIS leverage<input id="e_lev" type="number" step="1" value="1" min="1"></label>
+    </div>
+    <p class="hint">Stops round down and targets round half up onto NSE's tick: ₹0.01 to ₹250, ₹0.05 to ₹1,000, ₹0.10 to ₹5,000, ₹0.50 to ₹10,000, ₹1 to ₹20,000, ₹5 above.</p>
+  </form>
+  <div class="panel" id="eqOut" aria-live="polite"></div>
+</div>
+</section>
+
+<!-- ============ EXPIRIES ============ -->
+<section id="v-expiries" class="view" hidden>
+  <div class="panel">
+    <h2>Weekly expiries</h2>
+    <p class="hint" style="margin:0 0 12px">A holiday moves the expiry to the trading day before. The last expiry of the month is the monthly contract. NSE 2026 holiday list built in.</p>
+    <div class="cal" id="calOut"></div>
+  </div>
+</section>
+
+<!-- ============ JOURNAL & ORDERS ============ -->
+<section id="v-journal" class="view" hidden>
+<div class="grid">
+  <form class="panel" id="jForm" autocomplete="off">
+    <h2>Open your files</h2>
+    <p class="hint" style="margin:0 0 12px">Files stay in this browser; nothing is uploaded anywhere.</p>
+    <label for="j_journal">trader/journal.json<input id="j_journal" type="file" accept=".json"></label>
+    <label for="j_orders">trader/orders.json<input id="j_orders" type="file" accept=".json"></label>
+    <button type="button" class="ghost" id="j_sample">Show a sample</button>
+  </form>
+  <div class="panel" id="jOut" aria-live="polite"></div>
+</div>
+</section>
+
+<!-- ============ RUN ============ -->
+<section id="v-run" class="view" hidden>
+  <div class="panel prose">
+    <h2>Run the pack</h2>
+    <p>The analysis runs in Python on your computer (3.8 or newer, nothing to install), and in Claude Code as 16 skills. Code: <a href="https://github.com/ameetmore/nse-day-trader-skill" target="_blank" rel="noopener">github.com/ameetmore/nse-day-trader-skill</a>.</p>
+    <h3>Windows</h3>
+<pre class="cmd">git clone https://github.com/ameetmore/nse-day-trader-skill.git
+cd nse-day-trader-skill
+py -m unittest discover -s tests
+mkdir trader
+copy nse-budget\config.example.json trader\config.json</pre>
+    <h3>An intraday NIFTY option buy</h3>
+<pre class="cmd">py nse-entry\entry.py check ^NSEI --write
+py nse-fno-chain\chain.py symbols NIFTY --spot 25793
+  (Claude: Kite get_quotes with that list, saved to trader\fno\quotes-NIFTY.json)
+py nse-fno-chain\chain.py analyse NIFTY --quotes trader\fno\quotes-NIFTY.json --spot 25793 --write
+py nse-fno-plan\plan.py --write
+py nse-risk\check.py
+py nse-broker\ticket.py show</pre>
+    <h3>In Claude Code</h3>
+<pre class="cmd">/plugin marketplace add ameetmore/nse-day-trader-skill
+/plugin install nse-day-trader-skill@nse-day-trader-skill</pre>
+    <p>Then ask: <em>/nse-research RELIANCE</em>, <em>/nse-scanner</em>, <em>/nse-fno-chain NIFTY</em>, <em>/nse-journal score</em>. Options stay off until <code>"allow_options": true</code> in trader/config.json, and every order needs nse-risk's PASS and your typed yes.</p>
+  </div>
+</section>
+
+<p class="foot">Built on the pack's own rules: NSE 2026 holidays, NIFTY lot 65 (Tue), SENSEX lot 20 (Thu), option tick ₹0.05, Zerodha charges with STT 0.15% on option sales from 1 April 2026. Exchanges revise lots and limits: check before trading. Education and tooling, not investment advice.</p>
+</div>
+
+<script>
+(function(){
+"use strict";
+/* ---------------- facts (mirror nse-fno-chain/fno_core.py) ---------------- */
+const IDX={NIFTY:{name:"NIFTY 50",exch:"NFO",lot:65,step:50,wd:2,freeze:3510},SENSEX:{name:"SENSEX",exch:"BFO",lot:20,step:100,wd:4,freeze:null}};
+const HOL=new Set(["2026-01-15","2026-01-26","2026-03-03","2026-03-26","2026-03-31","2026-04-03","2026-04-14","2026-05-01","2026-05-28","2026-06-26","2026-09-14","2026-10-02","2026-10-20","2026-11-10","2026-11-24","2026-12-25"]);
+const HOLNAME={"2026-11-10":"Diwali Balipratipada","2026-11-24":"Guru Nanak Jayanti","2026-12-25":"Christmas","2026-10-20":"Dussehra","2026-10-02":"Gandhi Jayanti"};
+const MON=["JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT","NOV","DEC"];
+const WK={1:"1",2:"2",3:"3",4:"4",5:"5",6:"6",7:"7",8:"8",9:"9",10:"O",11:"N",12:"D"};
+const TICK=0.05, RATE=0.065;
+const inr=new Intl.NumberFormat("en-IN",{maximumFractionDigits:2,minimumFractionDigits:2});
+const inr0=new Intl.NumberFormat("en-IN",{maximumFractionDigits:0});
+const rs=v=>(v<0?"-":"")+"₹"+inr.format(Math.abs(v));
+const rs0=v=>(v<0?"-":"")+"₹"+inr0.format(Math.abs(Math.round(v)));
+const f2=v=>v==null||isNaN(v)?"–":Number(v).toFixed(2);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const $=id=>document.getElementById(id);
+
+const iso=d=>d.toISOString().slice(0,10);
+const dt=s=>{const [y,m,d]=s.split("-").map(Number);return new Date(Date.UTC(y,m-1,d));};
+const addD=(d,n)=>new Date(d.getTime()+n*864e5);
+const tradingDay=d=>{const w=d.getUTCDay();return w!==0&&w!==6&&!HOL.has(iso(d));};
+const prevTD=d=>{while(!tradingDay(d))d=addD(d,-1);return d;};
+function lastWeekday(y,m,wd){let d=new Date(Date.UTC(y,m+1,0));while(d.getUTCDay()!==wd)d=addD(d,-1);return d;}
+function isMonthly(idx,e){return iso(prevTD(lastWeekday(e.getUTCFullYear(),e.getUTCMonth(),IDX[idx].wd)))===iso(e);}
+function expiries(idx,start,n){const out=[];let d=addD(start,-7);while(out.length<n){d=addD(d,1);if(d.getUTCDay()!==IDX[idx].wd)continue;const e=prevTD(d);if(e>=start&&!out.some(x=>iso(x)===iso(e)))out.push(e);}return out;}
+function tsym(idx,e,k,r){const yy=String(e.getUTCFullYear()%100).padStart(2,"0");const ks=String(k);
+  return isMonthly(idx,e)?idx+yy+MON[e.getUTCMonth()]+ks+r:idx+yy+WK[e.getUTCMonth()+1]+String(e.getUTCDate()).padStart(2,"0")+ks+r;}
+const atm=(s,step)=>Math.round(s/step)*step;
+
+/* ---------------- Black-Scholes ---------------- */
+function erf(x){const s=Math.sign(x);x=Math.abs(x);const t=1/(1+0.3275911*x);const y=1-(((((1.061405429*t-1.453152027)*t)+1.421413741)*t-0.284496736)*t+0.254829592)*t*Math.exp(-x*x);return s*y;}
+const N=x=>0.5*(1+erf(x/Math.SQRT2)), npdf=x=>Math.exp(-0.5*x*x)/Math.sqrt(2*Math.PI);
+function bs(r_,s,k,t,r,v){if(t<=0||v<=0)return Math.max(0,r_==="CE"?s-k:k-s);const st=v*Math.sqrt(t),d1=(Math.log(s/k)+(r+v*v/2)*t)/st,d2=d1-st;
+  return r_==="CE"?s*N(d1)-k*Math.exp(-r*t)*N(d2):k*Math.exp(-r*t)*N(-d2)-s*N(-d1);}
+function greeks(r_,s,k,t,r,v){const st=v*Math.sqrt(t),d1=(Math.log(s/k)+(r+v*v/2)*t)/st,d2=d1-st;
+  const delta=r_==="CE"?N(d1):N(d1)-1;const th=(-s*npdf(d1)*v/(2*Math.sqrt(t))+(r_==="CE"?-r*k*Math.exp(-r*t)*N(d2):r*k*Math.exp(-r*t)*N(-d2)))/365;
+  return {delta,theta:th,gamma:npdf(d1)/(s*st),vega:s*npdf(d1)*Math.sqrt(t)/100};}
+function iv(r_,p,s,k,t,r){if(!(p>0)||t<=0)return null;const intr=Math.max(0,r_==="CE"?s-k:k-s)*Math.exp(-r*t);if(p<intr-1e-6)return null;
+  let lo=1e-4,hi=5;if(bs(r_,s,k,t,r,hi)<p)return null;for(let i=0;i<100&&hi-lo>1e-7;i++){const m=(lo+hi)/2;if(bs(r_,s,k,t,r,m)>p)hi=m;else lo=m;}const v=(lo+hi)/2;return v<0.01?null:v;}
+function yearsTo(dateStr,timeStr,exp){const [h,mi]=timeStr.split(":").map(Number);const now=dt(dateStr).getTime()+(h*60+mi)*6e4;const end=exp.getTime()+(15*60+30)*6e4;return Math.max(end-now,6e4)/(365*864e5);}
+const floorT=x=>Math.round(Math.floor(+(x/TICK).toFixed(6))*TICK*100)/100, ceilT=x=>Math.round(Math.ceil(+(x/TICK).toFixed(6))*TICK*100)/100, roundT=x=>Math.round(Math.floor(x/TICK+0.5)*TICK*100)/100;
+
+/* ---------------- costs ---------------- */
+function optCosts(q,buy,sell,exch){if(q<=0)return 0;const bv=q*buy,sv=q*sell,ex=exch==="BFO"?0.0325:0.03553;const br=40,stt=Math.round(sv*0.0015),e=(bv+sv)*ex/100,se=(bv+sv)*10/1e7,st=Math.round(bv*0.00003),g=(br+e+se)*0.18;return Math.round((br+stt+e+se+st+g)*100)/100;}
+function eqCosts(q,buy,sell){if(q<=0)return 0;const bv=q*buy,sv=q*sell;const br=Math.min(bv*0.0003,20)+Math.min(sv*0.0003,20);const stt=Math.round(sv*0.00025),e=(bv+sv)*0.0000307,se=(bv+sv)*10/1e7,st=Math.round(bv*0.00003),g=(br+e+se)*0.18;return Math.round((br+stt+e+se+st+g)*100)/100;}
+function eqTick(p){return p<=250?0.01:p<=1000?0.05:p<=5000?0.1:p<=10000?0.5:p<=20000?1:5;}
+
+/* ---------------- clock ---------------- */
+function istNow(){const n=new Date();return new Date(n.getTime()+n.getTimezoneOffset()*6e4+330*6e4);}
+function tickClock(){const n=istNow();const hm=String(n.getHours()).padStart(2,"0")+":"+String(n.getMinutes()).padStart(2,"0");
+  const d=dt(n.getFullYear()+"-"+String(n.getMonth()+1).padStart(2,"0")+"-"+String(n.getDate()).padStart(2,"0"));const mins=n.getHours()*60+n.getMinutes();
+  const open=tradingDay(d)&&mins>=555&&mins<930;$("clk").textContent=hm+" IST";
+  $("mkt").innerHTML='<span class="pill '+(open?"open":"closed")+'">NSE '+(open?"open":"closed")+'</span> '+(HOL.has(iso(d))?esc(HOLNAME[iso(d)]||"holiday"):d.getUTCDay()%6===0?"weekend":"9:15–15:30");}
+function todayISO(){const n=istNow();return n.getFullYear()+"-"+String(n.getMonth()+1).padStart(2,"0")+"-"+String(n.getDate()).padStart(2,"0");}
+
+/* ---------------- option planner ---------------- */
+let oIdx="NIFTY",oDir="up";
+function fillExpiries(sel,idx,dateStr){const keep=sel.value;const es=expiries(idx,dt(dateStr),6);
+  sel.innerHTML=es.map(e=>'<option value="'+iso(e)+'">'+iso(e)+" "+["Sun","Mon","Tue","Wed","Thu","Fri","Sat"][e.getUTCDay()]+(isMonthly(idx,e)?" · monthly":"")+"</option>").join("");
+  if(es.some(e=>iso(e)===keep))sel.value=keep;}
+function optPlan(){
+  const S=IDX[oIdx],spot=+$("o_spot").value,ie=+$("o_ie").value,is=+$("o_is").value,tr=+$("o_tr").value,vol=+$("o_iv").value/100;
+  const exp=dt($("o_exp").value),t=yearsTo($("o_date").value,$("o_time").value,exp),right=oDir==="up"?"CE":"PE",sign=right==="CE"?1:-1;
+  const msgs=[];
+  if(!(spot>0&&ie>0&&is>0&&vol>0))return {err:"Fill in the index now, entry, stop and implied volatility."};
+  if((oDir==="up"&&is>=ie)||(oDir==="down"&&is<=ie))return {err:"The index stop is on the wrong side of the entry for a "+(oDir==="up"?"call (stop must be below)":"put (stop must be above)")+"."};
+  const risk=Math.abs(ie-is),it=ie+(oDir==="up"?1:-1)*tr*risk;const a=atm(spot,S.step);
+  let k;const rule=$("o_rule").value;
+  if(rule==="atm")k=a;else if(rule==="itm1")k=a-sign*S.step;else if(rule==="otm1")k=a+sign*S.step;
+  else if(/^\d/.test(rule))k=+rule;
+  else{let best=null;for(let i=-10;i<=10;i++){const kk=a+i*S.step;const d=Math.abs(greeks(right,spot,kk,t,RATE,vol).delta);const sc=Math.abs(d-0.55);if(!best||sc<best[0]-1e-12)best=[sc,kk];}k=best[1];}
+  const g=greeks(right,spot,k,t,RATE,vol),model=bs(right,spot,k,t,RATE,vol);
+  const askIn=parseFloat($("o_ask").value);const prem=ceilT(askIn>0?askIn:model);const gap=prem-model;
+  let stop=floorT(bs(right,is,k,t,RATE,vol)+gap),target=roundT(bs(right,it,k,t,RATE,vol)+gap);stop=Math.max(TICK,stop);
+  if(stop>=prem)return {err:"The premium at the index stop is not below the entry. Widen the index stop."};
+  if(target<=prem)return {err:"The target premium is not above the entry. Raise the target."};
+  const buf=+$("o_buf").value||2;const gp=Math.min(stop*buf/100,0.25*(prem-stop));let sl=Math.max(TICK,floorT(stop-Math.max(TICK,gp)));if(sl>=stop)sl=Math.max(TICK,Math.round((stop-TICK)*100)/100);
+  const ru=Math.round((prem-sl)*100)/100,rw=Math.round((target-prem)*100)/100;
+  const ml=+$("o_ml").value||0,maxLots=+$("o_lots").value||0,cap=+$("o_prem").value||0;
+  const lim=[];let n=ml?Math.floor(ml/(ru*S.lot)):0;while(n>0&&n*S.lot*ru+optCosts(n*S.lot,prem,sl,S.exch)>ml+0.005)n--;
+  lim.push(["Max loss",n]);lim.push(["Max lots",maxLots]);if(cap)lim.push(["Premium cap",Math.floor(cap/(prem*S.lot))]);if(S.freeze)lim.push(["Freeze",Math.floor(S.freeze/S.lot)]);
+  const lots=Math.max(0,Math.min(...lim.map(x=>x[1])));const bound=lim.find(x=>x[1]===lots)[0];const q=lots*S.lot;
+  const fs=optCosts(q,prem,sl,S.exch),ft=optCosts(q,prem,target,S.exch);const nl=q*ru+fs,ng=q*rw-ft;const be=nl+ng>0?nl/(nl+ng):null;
+  if($("o_exp").value===$("o_date").value)msgs.push(["bad","Expiry day: time value collapses into the close. The pack's risk check blocks new entries after 13:00."]);
+  if((prem-stop)/prem>0.5)msgs.push(["warn","The stop gives up more than half the premium."]);
+  if(rw/ru<1.5)msgs.push(["warn","Reward to risk on the premium is "+(rw/ru).toFixed(2)+", under 1.5."]);
+  if(!(askIn>0))msgs.push(["warn","No ask given: the entry is the model price. Use the real ask from the chain."]);
+  if(!S.freeze&&oIdx==="SENSEX")msgs.push(["warn","SENSEX freeze limit is not set; check BSE's current figure."]);
+  return {S,right,k,exp,sym:tsym(oIdx,exp,k,right),prem,stop,sl,target,ru,rw,g,lots,q,bound,lim,fs,ft,nl,ng,be,it,ie,is,msgs,vol};
+}
+function renderOpt(){
+  fillExpiries($("o_exp"),oIdx,$("o_date").value);const p=optPlan();const o=$("optOut");
+  if(p.err){o.innerHTML='<h2>Plan</h2><div class="msg bad">'+esc(p.err)+"</div>";return;}
+  const leg=(type,side,extra)=>Object.assign({variety:"regular",exchange:p.S.exch,tradingsymbol:p.sym,transaction_type:side,quantity:p.q,product:"MIS",order_type:type,validity:"DAY"},extra);
+  const calls=[leg("LIMIT","BUY",{price:p.prem}),leg("SL","SELL",{trigger_price:p.stop,price:p.sl}),leg("LIMIT","SELL",{price:p.target})];
+  o.innerHTML='<h2>Plan · '+(p.right==="CE"?'<span style="color:var(--ce)">call</span>':'<span style="color:var(--pe)">put</span>')+"</h2>"+
+  '<div class="ticket"><div class="sym">'+esc(p.sym)+'</div><div class="hint" style="margin:2px 0 0">'+esc(p.S.name)+" "+p.k+" "+p.right+", expiry "+iso(p.exp)+(isMonthly(oIdx,p.exp)?" (monthly)":" (weekly)")+" · delta "+p.g.delta.toFixed(2)+" · theta "+rs(p.g.theta)+" a day per unit · IV "+(p.vol*100).toFixed(1)+"%</div></div>"+
+  '<div class="figs"><div class="fig"><span>Entry (limit)</span><b>'+f2(p.prem)+'</b></div><div class="fig"><span>Stop trigger · limit</span><b>'+f2(p.stop)+" · "+f2(p.sl)+'</b><small>index '+f2(p.is)+'</small></div><div class="fig"><span>Target</span><b>'+f2(p.target)+'</b><small>index '+f2(p.it)+'</small></div><div class="fig"><span>Size</span><b>'+p.lots+" lot"+(p.lots===1?"":"s")+'</b><small>'+p.q+" units · bound by "+p.bound.toLowerCase()+'</small></div></div>'+
+  (p.lots? '<div class="figs"><div class="fig loss"><span>At the stop, with costs</span><b>'+rs(-p.nl)+'</b><small>costs '+rs(p.fs)+'</small></div><div class="fig gain"><span>At the target, after costs</span><b>+'+rs(p.ng)+'</b><small>costs '+rs(p.ft)+'</small></div><div class="fig"><span>Premium paid</span><b>'+rs0(p.q*p.prem)+'</b></div><div class="fig"><span>Break-even win rate</span><b>'+(p.be!=null?Math.round(p.be*100)+"%":"–")+'</b><small>to not lose money</small></div></div>' : '<div class="msg bad">0 lots: bound by '+esc(p.bound.toLowerCase())+". No order.</div>")+
+  '<div class="msgs">'+p.msgs.map(m=>'<div class="msg '+m[0]+'">'+esc(m[1])+"</div>").join("")+"</div>"+
+  (p.lots?'<h3>Kite orders (copy into Claude, or let nse-broker build them)</h3><div class="legs">'+calls.map((c,i)=>'<div class="leg"><em>'+["1 · entry, now","2 · stop-loss, after the fill","3 · target, after the fill"][i]+"</em>"+esc(c.order_type)+" "+esc(c.transaction_type)+" "+c.quantity+"<br>"+(c.trigger_price?"trigger "+f2(c.trigger_price)+"<br>":"")+"price "+f2(c.price)+"</div>").join("")+'</div><div class="copyrow"><button type="button" class="ghost" id="o_copy">Copy order JSON</button><span class="hint" id="o_copied" style="margin:0"></span></div>':"")+
+  '<p class="hint" style="margin-top:12px">Premiums at the stop and target are a Black-Scholes model at this IV: IV can drop and time decay keeps working, so treat them as estimates. When one exit fills, cancel the other.</p>';
+  const b=$("o_copy");if(b)b.onclick=()=>copyText(JSON.stringify(calls,null,2),$("o_copied"));
+}
+function copyText(txt,note){const done=()=>{note.textContent="Copied.";};
+  try{navigator.clipboard.writeText(txt).then(done,()=>fallback());}catch(e){fallback();}
+  function fallback(){const ta=document.createElement("textarea");ta.value=txt;ta.style.position="fixed";ta.style.opacity="0";document.body.appendChild(ta);ta.select();try{document.execCommand("copy");done();}catch(e){note.textContent="Select and copy the text manually.";}ta.remove();}}
+
+/* ---------------- chain ---------------- */
+let cIdx="NIFTY";
+const SYMRX=/^(NIFTY|SENSEX)(\d{2})(?:([1-9OND])(\d{2})|(JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC))(\d+(?:\.\d+)?)(CE|PE)$/;
+function parseSym(s){const m=SYMRX.exec(s.split(":").pop());if(!m)return null;const y=2000+ +m[2];let e;
+  if(m[3]){const mo={O:10,N:11,D:12}[m[3]]||+m[3];e=new Date(Date.UTC(y,mo-1,+m[4]));}else{e=prevTD(lastWeekday(y,MON.indexOf(m[5]),IDX[m[1]].wd));}
+  return {idx:m[1],exp:e,k:+m[6],r:m[7]};}
+function sampleQuotes(idx,spot,dateStr,timeStr){const S=IDX[idx];const e=expiries(idx,dt(dateStr),1)[0];const t=yearsTo(dateStr,timeStr,e);const a=atm(spot,S.step);const out={};
+  let seed=7;const rnd=()=>{seed=(seed*16807)%2147483647;return seed/2147483647;};
+  for(let i=-10;i<=10;i++){const k=a+i*S.step;for(const r of ["CE","PE"]){const v=0.12+0.0000004*Math.pow((k-spot)/S.step*10,2)+(r==="PE"&&k<spot?0.01:0);let px=Math.max(0.05,Math.round(bs(r,spot,k,t,RATE,v)*20)/20);
+    const sp=Math.max(0.05,Math.round(px*(Math.abs(i)<=6?0.004:0.03)*20)/20);const oi=Math.round(1e6*((r==="CE"&&i===4)||(r==="PE"&&i===-4)?1.6:1)*Math.max(0.15,1-Math.abs(i)/14)*(0.85+0.3*rnd()));
+    out[S.exch+":"+tsym(idx,e,k,r)]={last_price:px,oi,volume:oi*3,depth:{buy:[{price:Math.max(0.05,Math.round((px-sp/2)*20)/20),quantity:1300}],sell:[{price:Math.round((px+sp/2)*20)/20,quantity:1200}]}};}}
+  return out;}
+function analyseChain(){
+  const o=$("chOut");let doc;const raw=$("c_json").value.trim();
+  if(!raw){o.innerHTML='<h2>Chain</h2><p class="hint">Paste Kite\'s get_quotes answer, open the saved file, or load the sample.</p>';return;}
+  try{doc=JSON.parse(raw);}catch(e){o.innerHTML='<h2>Chain</h2><div class="msg bad">That is not valid JSON: '+esc(e.message)+"</div>";return;}
+  if(doc&&doc.data&&typeof doc.data==="object"&&!Array.isArray(doc.data))doc=doc.data;
+  const spot=+$("c_spot").value,dateStr=$("c_date").value,timeStr=$("c_time").value,S=IDX[cIdx];const rows={};let exp=null;
+  for(const [key,q] of Object.entries(doc||{})){const p=parseSym(key);if(!p||p.idx!==cIdx)continue;if(!exp||p.exp<exp)exp=p.exp;}
+  if(!exp){o.innerHTML='<h2>Chain</h2><div class="msg bad">No '+cIdx+' option quotes found. Keys should look like NFO:NIFTY26N0325800CE.</div>';return;}
+  const t=yearsTo(dateStr,timeStr,exp);
+  for(const [key,q] of Object.entries(doc)){const p=parseSym(key);if(!p||p.idx!==cIdx||iso(p.exp)!==iso(exp))continue;
+    const d=q.depth||{},bid=((d.buy||[]).find(x=>x.price)||{}).price,ask=((d.sell||[]).find(x=>x.price)||{}).price;const mid=bid&&ask?(bid+ask)/2:q.last_price;
+    const sp=bid&&ask&&mid?100*(ask-bid)/mid:null;const v=mid?iv(p.r,mid,spot,p.k,t,RATE):null;const g=v?greeks(p.r,spot,p.k,t,RATE,v):null;
+    (rows[p.k]=rows[p.k]||{})[p.r]={ltp:q.last_price,bid,ask,mid,sp,thin:sp==null||sp>2,oi:+q.oi||0,iv:v,delta:g&&g.delta,theta:g&&g.theta};}
+  const ks=Object.keys(rows).map(Number).sort((a,b)=>a-b);let a=atm(spot,S.step);if(!rows[a])a=ks.reduce((m,k)=>Math.abs(k-spot)<Math.abs(m-spot)?k:m,ks[0]);
+  const ce=k=>(rows[k].CE||{}).oi||0,pe=k=>(rows[k].PE||{}).oi||0;const tce=ks.reduce((s,k)=>s+ce(k),0),tpe=ks.reduce((s,k)=>s+pe(k),0);
+  const pain=ks.reduce((best,x)=>{const v=ks.reduce((s,k)=>s+ce(k)*Math.max(0,x-k)+pe(k)*Math.max(0,k-x),0);return !best||v<best[1]?[x,v]:best;},null)[0];
+  const cw=ks.reduce((m,k)=>ce(k)>ce(m)?k:m,ks[0]),pw=ks.reduce((m,k)=>pe(k)>pe(m)?k:m,ks[0]);
+  const c=rows[a].CE||{},p=rows[a].PE||{};const strad=c.mid&&p.mid?c.mid+p.mid:null;const days=t*365;const oiMax=Math.max(...ks.map(k=>Math.max(ce(k),pe(k))));
+  const bar=(v,col)=>'<span style="display:inline-block;height:6px;vertical-align:middle;margin-left:6px;width:'+Math.round(40*v/oiMax)+'px;background:'+col+';opacity:.55"></span>';
+  o.innerHTML='<h2>'+esc(S.name)+" · "+iso(exp)+(isMonthly(cIdx,exp)?" monthly":" weekly")+"</h2>"+
+  '<div class="figs"><div class="fig"><span>ATM straddle</span><b>'+f2(strad)+'</b><small>±'+(strad?Math.round(0.8*strad):"–")+" pts ("+(strad?(80*strad/spot).toFixed(2):"–")+'%) priced by expiry</small></div><div class="fig"><span>PCR (OI)</span><b>'+(tce?(tpe/tce).toFixed(2):"–")+'</b></div><div class="fig"><span>Max pain</span><b>'+pain+'</b></div><div class="fig"><span>OI walls</span><b>'+cw+" / "+pw+'</b><small>most call OI / most put OI</small></div><div class="fig"><span>Days left</span><b>'+days.toFixed(2)+"</b></div></div>"+
+  '<div class="tbl"><table><thead><tr><th>CE OI</th><th>Δ</th><th>IV%</th><th>θ/day</th><th>Sprd%</th><th>CE ltp</th><th style="text-align:center">Strike</th><th>PE ltp</th><th>Sprd%</th><th>θ/day</th><th>IV%</th><th>Δ</th><th>PE OI</th></tr></thead><tbody>'+
+  ks.map(k=>{const C=rows[k].CE||{},P=rows[k].PE||{};const ci=k<spot?" itm-ce":"",pi=k>spot?" itm-pe":"";
+    return '<tr'+(k===a?' class="atm"':"")+' data-k="'+k+'"><td class="'+ci+'">'+(C.oi?inr0.format(C.oi):"–")+bar(C.oi||0,"var(--ce)")+'</td><td class="'+ci+'">'+f2(C.delta)+'</td><td class="'+ci+'">'+(C.iv?(C.iv*100).toFixed(1):"–")+'</td><td class="'+ci+'">'+f2(C.theta)+'</td><td class="'+ci+(C.thin?" thin":"")+'">'+f2(C.sp)+'</td><td class="'+ci+'">'+f2(C.ltp)+'</td><td class="k">'+k+'</td><td class="'+pi+'">'+f2(P.ltp)+'</td><td class="'+pi+(P.thin?" thin":"")+'">'+f2(P.sp)+'</td><td class="'+pi+'">'+f2(P.theta)+'</td><td class="'+pi+'">'+(P.iv?(P.iv*100).toFixed(1):"–")+'</td><td class="'+pi+'">'+f2(P.delta)+'</td><td class="'+pi+'">'+bar(P.oi||0,"var(--pe)")+(P.oi?inr0.format(P.oi):"–")+"</td></tr>";}).join("")+
+  '</tbody></table></div><p class="hint" style="margin-top:10px">Shaded cells are in the money; struck-through spreads are too thin to trade (over 2%). Click a strike to plan it: the planner takes its ask and IV. Open interest shows where positions sit, not which way they face.</p>';
+  o.querySelectorAll("tbody tr").forEach(tr=>tr.onclick=()=>{const k=+tr.dataset.k;const r=oDir==="up"?"CE":"PE";const L=rows[k][r]||{};
+    setIdx(cIdx);$("o_spot").value=spot;$("o_ie").value=spot;$("o_date").value=dateStr;$("o_time").value=timeStr;fillExpiries($("o_exp"),cIdx,dateStr);$("o_exp").value=iso(exp);
+    if(L.iv)$("o_iv").value=(L.iv*100).toFixed(1);if(L.ask)$("o_ask").value=L.ask;
+    const sel=$("o_rule");let opt=[...sel.options].find(x=>x.value===String(k));if(!opt){opt=new Option("Strike "+k,String(k));sel.add(opt);}sel.value=String(k);location.hash="options";});
+}
+
+
+/* ---------------- equity ---------------- */
+function renderEq(){
+  const e=+$("e_entry").value,s0=+$("e_stop").value,R=+$("e_tr").value,B=+$("e_budget").value,ML=+$("e_ml").value,cap=+$("e_cap").value,buf=+$("e_buf").value,lev=Math.max(1,+$("e_lev").value||1);
+  const o=$("eqOut");if(!(e>0&&s0>0&&s0<e)){o.innerHTML='<h2>Size</h2><div class="msg bad">The stop must be above 0 and below the entry.</div>';return;}
+  const tk=eqTick(e);const stop=Math.round(Math.floor(+(s0/tk).toFixed(6))*tk*100)/100;const risk=Math.round((e-stop)*100)/100;const target=Math.round(Math.floor((e+R*risk)/tk+0.5)*tk*100)/100;
+  let n=Math.floor(ML/risk);while(n>0&&n*risk+eqCosts(n,e,stop)>ML+0.005)n--;
+  const avail=B*(1-buf/100)*lev;const lim=[["Max loss after costs",n],["Position cap",Math.floor(B*cap/100/e)],["Cash"+(lev>1?" × "+lev+" MIS":""),Math.floor(avail/e)]];
+  const q=Math.max(0,Math.min(...lim.map(x=>x[1])));const bound=lim.find(x=>x[1]===q)[0];const fs=eqCosts(q,e,stop),ft=eqCosts(q,e,target);const nl=q*risk+fs,ng=q*(target-e)-ft;const be=nl+ng>0?nl/(nl+ng):null;
+  o.innerHTML='<h2>'+esc($("e_sym").value.toUpperCase()||"Size")+" · intraday MIS on NSE</h2>"+
+  '<div class="figs"><div class="fig"><span>Shares</span><b>'+inr0.format(q)+'</b><small>bound by '+esc(bound.toLowerCase())+'</small></div><div class="fig"><span>Position</span><b>'+rs0(q*e)+'</b>'+(lev>1?"<small>margin "+rs0(q*e/lev)+"</small>":"")+'</div><div class="fig"><span>Stop · target</span><b>'+f2(stop)+" · "+f2(target)+'</b><small>tick ₹'+tk.toFixed(2)+'</small></div><div class="fig"><span>Risk a share</span><b>'+f2(risk)+"</b></div></div>"+
+  '<div class="figs"><div class="fig loss"><span>At the stop, with costs</span><b>'+rs(-nl)+'</b><small>costs '+rs(fs)+'</small></div><div class="fig gain"><span>At the target, after costs</span><b>+'+rs(ng)+'</b><small>costs '+rs(ft)+'</small></div><div class="fig"><span>Break-even win rate</span><b>'+(be!=null?Math.round(be*100)+"%":"–")+"</b></div></div>"+
+  '<h3>Limits (the smallest wins)</h3><div class="tbl"><table><tbody>'+lim.map(l=>'<tr><td style="text-align:left;font-family:var(--f-body)">'+esc(l[0])+"</td><td>"+inr0.format(l[1])+" shares"+(l[0]===bound?" ←":"")+"</td></tr>").join("")+"</tbody></table></div>"+
+  '<p class="hint" style="margin-top:12px">Costs at Zerodha intraday rates: brokerage 0.03% or ₹20 an order, STT 0.025% on the sell, NSE 0.00307%, SEBI ₹10 a crore, stamp duty 0.003% on the buy, GST 18%. Flat by 15:10, before Zerodha\'s auto square-off.</p>';
+}
+
+/* ---------------- expiries ---------------- */
+function renderCal(){
+  const start=dt(todayISO());$("calOut").innerHTML=["NIFTY","SENSEX"].map(idx=>{const S=IDX[idx];const es=expiries(idx,start,8);
+    return '<div><h3 style="margin-top:0">'+S.name+" · lot "+S.lot+" · "+S.exch+"</h3><ol>"+es.map(e=>{let nominal=e;while(nominal.getUTCDay()!==S.wd)nominal=addD(nominal,1);const shifted=iso(nominal)!==iso(e);
+      return "<li><span>"+iso(e)+" "+["Sun","Mon","Tue","Wed","Thu","Fri","Sat"][e.getUTCDay()]+"</span><span>"+(isMonthly(idx,e)?'<span class="tag m">monthly</span> ':"")+(shifted?'<span class="tag h">moved from '+iso(nominal).slice(5)+" ("+esc(HOLNAME[iso(nominal)]||"holiday")+")</span>":"")+"</span></li>";}).join("")+"</ol></div>";}).join("");
+}
+
+/* ---------------- journal & orders ---------------- */
+const SAMPLE_J={entries:[{id:"DEMO-2026-10-15-1",kind:"rating",symbol:"DEMO",date:"2026-10-15",rating:"Overweight",status:"settled",horizon:5,return_pct:-2.9,nifty_pct:-0.45,alpha_pct:-2.45,hit:false,lesson:"The call lagged NIFTY by 2.45% over five days. Check the regime first."},
+  {id:"DEMO-2026-10-26-1",kind:"rating",symbol:"DEMO",date:"2026-10-26",rating:"Hold",status:"pending",horizon:5},
+  {id:"DEMO-2026-10-29-1",kind:"trade",symbol:"DEMO",date:"2026-10-29",pnl:-1213.95,r:-1}]};
+let J=null,O=null;
+function renderJ(){
+  const o=$("jOut");let h="";
+  if(!J&&!O){o.innerHTML='<h2>Journal &amp; orders</h2><p class="hint">Open trader/journal.json for the scorecard and trader/orders.json for the order tickets, or show the sample.</p>';return;}
+  if(J){const es=J.entries||[];const set=es.filter(e=>e.kind==="rating"&&e.status==="settled");const by={};set.forEach(e=>{const b=by[e.rating]=by[e.rating]||{n:0,h:0,a:0};b.n++;b.h+=e.hit?1:0;b.a+=e.alpha_pct;});
+    const tr=es.filter(e=>e.kind==="trade");const net=tr.reduce((s,e)=>s+e.pnl,0);
+    h+="<h2>Scorecard</h2>"+'<div class="figs"><div class="fig"><span>Settled calls</span><b>'+set.length+'</b><small>'+(set.length<20?"too few to tell skill from luck":"")+'</small></div><div class="fig"><span>Hit rate</span><b>'+(set.length?Math.round(100*set.filter(e=>e.hit).length/set.length)+"%":"–")+'</b></div><div class="fig '+(net<0?"loss":"gain")+'"><span>Day trades net</span><b>'+(net>=0?"+":"")+rs(net)+'</b><small>'+tr.length+" trade"+(tr.length===1?"":"s")+'</small></div><div class="fig"><span>Pending</span><b>'+es.filter(e=>e.status==="pending").length+"</b></div></div>"+
+    (Object.keys(by).length?'<div class="tbl"><table><thead><tr><th style="text-align:left">Rating</th><th>Calls</th><th>Hit rate</th><th>Avg alpha vs NIFTY</th></tr></thead><tbody>'+["Buy","Overweight","Hold","Underweight","Sell"].filter(r=>by[r]).map(r=>'<tr><td style="text-align:left">'+r+"</td><td>"+by[r].n+"</td><td>"+Math.round(100*by[r].h/by[r].n)+"%</td><td>"+(by[r].a/by[r].n>=0?"+":"")+(by[r].a/by[r].n).toFixed(2)+"%</td></tr>").join("")+"</tbody></table></div>":"")+
+    '<h3>Entries</h3><div class="tbl"><table><thead><tr><th style="text-align:left">Date</th><th style="text-align:left">Symbol</th><th style="text-align:left">Call</th><th>Result</th><th style="text-align:left">Lesson</th></tr></thead><tbody>'+es.slice().reverse().map(e=>'<tr><td style="text-align:left">'+esc(e.date)+'</td><td style="text-align:left">'+esc(e.symbol)+'</td><td style="text-align:left">'+esc(e.kind==="trade"?"day trade":e.rating+" ("+e.status+")")+"</td><td>"+(e.kind==="trade"?(e.pnl>=0?"+":"")+rs(e.pnl):e.status==="settled"?(e.alpha_pct>=0?"+":"")+e.alpha_pct.toFixed(2)+"% alpha":"–")+'</td><td style="text-align:left;white-space:normal;min-width:200px;font-family:var(--f-body)">'+esc(e.lesson||"")+"</td></tr>").join("")+"</tbody></table></div>";}
+  if(O){const os=O.orders||[];h+='<h2 style="margin-top:22px">Proposed orders</h2>'+(os.length?os.map(x=>{const pl=x.plan||{};return '<div class="ticket"><div class="sym">'+esc((x.side||"").toUpperCase())+" "+esc(x.qty||"")+" "+esc(x.symbol||"")+'</div><div class="hint" style="margin:4px 0 0">'+esc(x.exchange||"NSE")+" · "+esc(x.product||"MIS")+" · "+esc(x.type||"market")+(x.limit_price?" "+esc(x.limit_price):"")+(x.stop_loss_stop_price?" · stop "+esc(x.stop_loss_stop_price)+(x.stop_loss_limit_price?" (limit "+esc(x.stop_loss_limit_price)+")":""):"")+(x.take_profit_limit_price?" · target "+esc(x.take_profit_limit_price):"")+"</div>"+(pl.net_loss_at_stop?'<div class="msg warn" style="margin-top:8px">Loss at the stop with costs: '+rs(-pl.net_loss_at_stop)+"</div>":"")+(x.why?'<p class="hint" style="margin:8px 0 0">'+esc(x.why)+"</p>":"")+"</div>";}).join(""):'<p class="hint">No orders in the file.</p>')+'<p class="hint">Run nse-risk and nse-broker to check and place them; this page only shows them.</p>';}
+  o.innerHTML=h;
+}
+function readFile(input,cb){input.onchange=()=>{const f=input.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{try{cb(JSON.parse(r.result));}catch(e){$("jOut").innerHTML='<div class="msg bad">'+esc(f.name)+" is not valid JSON.</div>";}};r.readAsText(f);};}
+
+/* ---------------- wiring ---------------- */
+function setIdx(i){oIdx=i;document.querySelectorAll("[data-idx]").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.idx===i)));
+  const sel=$("o_rule");[...sel.options].filter(x=>/^\d/.test(x.value)).forEach(x=>x.remove());if(/^\d/.test(sel.value))sel.value="delta:0.55";}
+document.querySelectorAll("[data-idx]").forEach(b=>b.onclick=()=>{const i=b.dataset.idx;setIdx(i);const d={NIFTY:[25792.9,25770],SENSEX:[84100,84190]}[i];
+  $("o_spot").value=d[0];$("o_ie").value=d[0];$("o_is").value=oDir==="up"?(i==="NIFTY"?25770:84010):(i==="NIFTY"?25815:84190);$("o_ask").value="";renderOpt();});
+document.querySelectorAll("[data-dir]").forEach(b=>b.onclick=()=>{oDir=b.dataset.dir;document.querySelectorAll("[data-dir]").forEach(x=>x.setAttribute("aria-pressed",String(x===b)));
+  const ie=+$("o_ie").value,step=IDX[oIdx].step;$("o_is").value=(oDir==="up"?ie-step/2:ie+step/2).toFixed(2);$("o_ask").value="";renderOpt();});
+$("optForm").addEventListener("input",e=>{if(e.target.id==="o_date")fillExpiries($("o_exp"),oIdx,$("o_date").value);renderOpt();});
+$("optForm").addEventListener("change",renderOpt);
+$("optForm").addEventListener("submit",e=>e.preventDefault());
+document.querySelectorAll("[data-cidx]").forEach(b=>b.onclick=()=>{cIdx=b.dataset.cidx;document.querySelectorAll("[data-cidx]").forEach(x=>x.setAttribute("aria-pressed",String(x===b)));$("c_spot").value=cIdx==="NIFTY"?25792.9:84100;$("c_json").value="";analyseChain();});
+$("c_go").onclick=analyseChain;
+$("c_sample").onclick=()=>{$("c_json").value=JSON.stringify({data:sampleQuotes(cIdx,+$("c_spot").value,$("c_date").value,$("c_time").value)},null,1);analyseChain();};
+readFile($("c_file"),d=>{$("c_json").value=JSON.stringify(d,null,1);analyseChain();});
+$("chForm").addEventListener("submit",e=>e.preventDefault());
+$("eqForm").addEventListener("input",renderEq);$("eqForm").addEventListener("submit",e=>e.preventDefault());
+readFile($("j_journal"),d=>{J=d;renderJ();});readFile($("j_orders"),d=>{O=d;renderJ();});
+$("j_sample").onclick=()=>{J=SAMPLE_J;O={orders:[{symbol:"NIFTY26N0325750CE",exchange:"NFO",product:"MIS",side:"buy",qty:"130",type:"limit",limit_price:"117.10",stop_loss_stop_price:"110.30",stop_loss_limit_price:"108.60",take_profit_limit_price:"131.35",why:"Sample: NIFTY call on an up signal, 2 lots of 65, bound by max lots",plan:{net_loss_at_stop:1185.54}}]};renderJ();};
+
+const views=["options","chain","equity","expiries","journal","run"];
+function route(){let v=(location.hash||"#options").slice(1);if(!views.includes(v))v="options";views.forEach(x=>{$("v-"+x).hidden=x!==v;});
+  document.querySelectorAll("nav.tabs a").forEach(a=>{if(a.getAttribute("href")==="#"+v)a.setAttribute("aria-current","page");else a.removeAttribute("aria-current");});
+  if(v==="options")renderOpt();if(v==="chain")analyseChain();if(v==="equity")renderEq();if(v==="expiries")renderCal();if(v==="journal")renderJ();}
+window.addEventListener("hashchange",route);
+
+/* start: the next NIFTY expiry's eve, or today if it is a trading day */
+const today=todayISO();$("o_date").value=today;$("c_date").value=today;
+const n=istNow();const hm=String(n.getHours()).padStart(2,"0")+":"+String(n.getMinutes()).padStart(2,"0");
+if(n.getHours()*60+n.getMinutes()>=555&&n.getHours()*60+n.getMinutes()<930){$("o_time").value=hm;$("c_time").value=hm;}
+fillExpiries($("o_exp"),"NIFTY",today);
+$("c_json").value=JSON.stringify({data:sampleQuotes("NIFTY",25792.9,today,$("c_time").value)},null,1);
+tickClock();setInterval(tickClock,30000);route();
+})();
+</script>
+
+</body>
+</html>

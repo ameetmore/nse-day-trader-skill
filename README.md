@@ -95,6 +95,14 @@ journal: settle every call against NIFTY, write the lesson, keep the scorecard  
 news / analyst / deals / journal settle                                             (on a schedule)
 ```
 
+## The desk (web UI)
+
+`ui/index.html` is a one-page web desk for the pack: the NIFTY/SENSEX option planner,
+an option-chain reader (paste Kite's get_quotes answer), the equity sizer with Indian costs,
+the expiry calendar, and a viewer for `trader/journal.json` and `trader/orders.json`. Open
+the file in any browser; it needs no server and sends nothing anywhere. It has no live prices:
+those come from Kite through the Python tools.
+
 ## Index options: NIFTY 50 and SENSEX
 
 > SEBI's study of FY2025-26 found **87.7% of individual F&O traders lost money**. Bought
