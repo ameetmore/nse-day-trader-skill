@@ -1,0 +1,26 @@
+{
+  "name": "nse-day-trader-skill",
+  "description": "11 Claude skills for intraday trading on NSE/BSE: scan NIFTY charts, track NSE filings and news, time every entry and exit on NSE's tick grid, size after Indian trading costs, replay every outcome before you risk a rupee, and send orders to Zerodha Kite only with your yes.",
+  "version": "1.0.0",
+  "author": {
+    "name": "ameetmore",
+    "url": "https://github.com/ameetmore"
+  },
+  "homepage": "https://github.com/ameetmore/nse-day-trader-skill",
+  "repository": "https://github.com/ameetmore/nse-day-trader-skill",
+  "license": "MIT",
+  "keywords": [
+    "claude-code",
+    "claude-skills",
+    "day-trading",
+    "intraday",
+    "nse",
+    "bse",
+    "nifty",
+    "zerodha",
+    "kite",
+    "india",
+    "paper-trading"
+  ],
+  "skills": "./"
+}

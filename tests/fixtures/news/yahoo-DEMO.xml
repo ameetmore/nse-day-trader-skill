@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0"><channel><title>Yahoo! Finance: DEMO.NS News (synthetic fixture)</title>
+<item><title>Demo Industries Q2 profit rises 18% on export orders</title><link>https://example.com/demo-q2</link><guid>demo-q2</guid><description>Demo Industries Ltd reported a higher net profit for the September quarter.</description><pubDate>Thu, 29 Oct 2026 02:40:00 +0000</pubDate></item>
+<item><title>Brokerage raises Demo Industries target price</title><link>https://example.com/demo-target</link><guid>demo-target</guid><description>Analysts upgrade the stock after results.</description><pubDate>Wed, 28 Oct 2026 11:15:00 +0000</pubDate></item>
+<item><title>Old story from last month</title><link>https://example.com/demo-old</link><guid>demo-old</guid><description>Nothing new.</description><pubDate>Mon, 28 Sep 2026 05:00:00 +0000</pubDate></item>
+</channel></rss>
