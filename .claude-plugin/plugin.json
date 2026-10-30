@@ -1,7 +1,7 @@
 {
   "name": "nse-day-trader-skill",
-  "description": "16 Claude skills for trading NSE/BSE, including intraday NIFTY 50 and SENSEX option buying: scan NIFTY charts, run a bull-vs-bear research committee with a journal that scores every call against NIFTY, track NSE filings and news, time every entry and exit on NSE's tick grid, size after Indian trading costs, replay every outcome before you risk a rupee, and send orders to Zerodha Kite only with your yes.",
-  "version": "1.2.0",
+  "description": "17 Claude skills for trading NSE/BSE, including intraday NIFTY 50 and SENSEX option buying: scan NIFTY charts, run a bull-vs-bear research committee with a journal that scores every call against NIFTY, track NSE filings and news, time every entry and exit on NSE's tick grid, size after Indian trading costs, replay every outcome before you risk a rupee, and send orders to Zerodha Kite only with your yes.",
+  "version": "1.3.0",
   "author": {
     "name": "ameetmore",
     "url": "https://github.com/ameetmore"

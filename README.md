@@ -1,6 +1,6 @@
 # The NSE Day Trader skill
 
-16 Claude skills for trading India's NSE and BSE, including intraday NIFTY 50 and SENSEX
+17 Claude skills for trading India's NSE and BSE, including intraday NIFTY 50 and SENSEX
 option buying: scan NIFTY charts for
 setups, convene a research committee that argues bull against bear before it
 commits to a rating, time every entry and exit on NSE's tick grid, size every
@@ -61,7 +61,7 @@ then use `py` where this README says `python3`, and `\` in paths:
 `nse-budget/config.example.json` to `trader/config.json` in your project and
 set your budget and limits in rupees.
 
-## The sixteen
+## The seventeen
 
 | command | job | what it does |
 | --- | --- | --- |
@@ -80,6 +80,7 @@ set your budget and limits in rupees.
 | `/nse-research` | Research Committee | Four analysts, a bull vs bear debate, a research manager, a trader, an aggressive / conservative / neutral risk debate and a portfolio manager's Buy-to-Sell rating, grounded in the pack's own data. |
 | `/nse-fno-chain` | Option Chain | NIFTY 50 and SENSEX: expiries (holiday-shifted), Kite instruments, and from Kite quotes the per-strike IV, Greeks, spreads, OI, ATM straddle, PCR, max pain. |
 | `/nse-fno-plan` | Option Planner | Buys one call or put on an index signal: strike near delta 0.55, premium stop and target from the index levels, SL stop-limit exit, lots sized to your max loss after F&O costs. |
+| `/nse-backtest` | Backtest | Replays the NIFTY/SENSEX option ORB on years of real 5-minute Kite bars, premiums modelled from India VIX, with costs; by year, direction and expiry day, next to the index-only result. |
 | `/nse-journal` | Decision Journal | Records every rating and trade, scores each call against NIFTY once its window has traded, keeps a lesson for it, and feeds the lessons back. |
 
 ## How it fits together
@@ -142,6 +143,26 @@ A holiday moves the expiry to the trading day before. Costs (Zerodha options): â
 STT 0.15% of the sell premium (from 1 April 2026), exchange 0.03553% NSE / 0.0325% BSE,
 SEBI â‚¹10 a crore, stamp duty 0.003% on the buy, GST 18%. Every figure can be overridden under
 `"fno"` in `trader/config.json` when the exchanges revise it.
+
+## Backtesting 5 years
+
+```
+set KITE_API_KEY=...            (your Kite Connect app, with historical data)
+set KITE_API_SECRET=...
+py nse-backtest\backtest.py kite-login                 (open the URL, log in)
+py nse-backtest\backtest.py kite-token REQUEST_TOKEN   (from the address you land on)
+py nse-backtest\backtest.py fetch --index NIFTY --years 5
+py nse-backtest\backtest.py fetch-vix
+py nse-backtest\backtest.py run --index NIFTY --write
+```
+
+The run replays the option-buying rules on every day: the 9:15-9:30 range, the first close
+outside it, the range-midpoint stop, a 2R target, the delta-0.55 strike of that date's nearest
+weekly expiry (NIFTY Thursday until August 2025, Tuesday after; SENSEX weeklies from May 2023),
+the 13:00 expiry-day cutoff and the 15:10 exit. Option premiums are **modelled** (Black-Scholes
+on the real index bar, prior-day India VIX as the volatility), because expired option prices are
+not freely available; the report puts the same signal traded on the index, from real bars only,
+next to it. Costs at today's rates, rupees at today's lot size, 0.5% slippage each way.
 
 ## The research committee
 
@@ -266,7 +287,7 @@ python3 nse-fno-plan/plan.py --write                                # one bought
 ```
 
 ```bash
-python3 -m unittest discover -s tests -v      # 89 tests, offline
+python3 -m unittest discover -s tests -v      # 98 tests, offline
 python3 tests/make_fixtures.py                # rebuild the synthetic fixtures
 ```
 

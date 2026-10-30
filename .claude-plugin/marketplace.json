@@ -9,7 +9,7 @@
   "plugins": [
     {
       "name": "nse-day-trader-skill",
-      "description": "Sixteen Claude skills for trading NSE/BSE: an index option chain and option-buying planner for NIFTY 50 and SENSEX, a TradingAgents-style research committee (analysts, bull vs bear, risk debate, Buy-to-Sell rating), a decision journal scored against NIFTY, a technical-indicator snapshot, a chart scanner (NIFTY 500 or every EQ stock), a news monitor with NSE filings, an entry timer, an exit planner on NSE's tick grid, a time machine that replays 10,000 sessions, a risk manager, a budget manager with Indian trading costs, a Zerodha Kite order executor (paper by default, never without your yes), price alerts on the NSE clock, an earnings analyst and a bulk and block deals tracker.",
+      "description": "Seventeen Claude skills for trading NSE/BSE: a 5-year backtest of the option strategy on real Kite bars, an index option chain and option-buying planner for NIFTY 50 and SENSEX, a TradingAgents-style research committee (analysts, bull vs bear, risk debate, Buy-to-Sell rating), a decision journal scored against NIFTY, a technical-indicator snapshot, a chart scanner (NIFTY 500 or every EQ stock), a news monitor with NSE filings, an entry timer, an exit planner on NSE's tick grid, a time machine that replays 10,000 sessions, a risk manager, a budget manager with Indian trading costs, a Zerodha Kite order executor (paper by default, never without your yes), price alerts on the NSE clock, an earnings analyst and a bulk and block deals tracker.",
       "source": "./",
       "category": "productivity",
       "homepage": "https://github.com/ameetmore/nse-day-trader-skill"

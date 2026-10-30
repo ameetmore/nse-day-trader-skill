@@ -213,6 +213,34 @@ def main():
                               "sell": [{"price": round((px + sprd / 2) * 20) / 20, "quantity": 1200, "orders": 7}]}}
         write("fno/quotes-%s.json" % idx, {"data": quotes})
 
+    # backtest: Kite-format 5-minute NIFTY bars, 1 Aug to 31 Oct 2025 in two chunk files (Thursday
+    # expiries until the end of August, Tuesday after; Thursday 14 Aug 2025 is left out of the
+    # data so the expiry must move to Wednesday), and India VIX day candles
+    brng = random.Random(5)
+    bdays, d = [], datetime.date(2025, 8, 1)
+    while d <= datetime.date(2025, 10, 31):
+        if d.weekday() < 5 and d.isoformat() not in ("2025-08-14", "2025-08-15", "2025-10-02"):
+            bdays.append(d)
+        d += datetime.timedelta(days=1)
+    chunks, vixc, lvl, vx = {1: [], 2: []}, [], 24500.0, 12.5
+    for d in bdays:
+        trend = brng.choice((-1, 0, 0, 1)) * 0.00025
+        for i in range(BARS):
+            o = lvl
+            c = o * (1 + brng.gauss(trend, 0.0011))
+            h, lo = max(o, c) * (1 + abs(brng.gauss(0, 0.0004))), min(o, c) * (1 - abs(brng.gauss(0, 0.0004)))
+            t = datetime.datetime.combine(d, datetime.time(9, 15)) + datetime.timedelta(minutes=5 * i)
+            chunks[1 if d.month < 9 else 2].append({"date": t.strftime("%Y-%m-%dT%H:%M:%S+0530"), "open": round(o, 2),
+                                                    "high": round(h, 2), "low": round(lo, 2), "close": round(c, 2),
+                                                    "volume": 0})
+            lvl = c
+        vx = max(9.5, min(22.0, vx * (1 + brng.gauss(0, 0.05))))
+        vixc.append({"date": "%sT00:00:00+0530" % d, "open": round(vx, 2), "high": round(vx * 1.03, 2),
+                     "low": round(vx * 0.97, 2), "close": round(vx, 2), "volume": 0})
+    write("backtest/NIFTY-2025-08-01.json", {"data": chunks[1]})
+    write("backtest/NIFTY-2025-09-01.json", {"data": chunks[2]})
+    write("backtest/VIX-day.json", {"data": vixc})
+
     # quotes for alerts
     for sym in ("DEMO", "FLAT"):
         c = json.load(open(os.path.join(OUT, "charts", "%s.json" % sym), encoding="utf-8"))
