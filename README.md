@@ -52,7 +52,11 @@ git clone https://github.com/ameetmore/nse-day-trader-skill.git
 cp -r nse-day-trader-skill/nse-* ~/.claude/skills/
 ```
 
-Python 3.8 or newer. Nothing to pip install. Then copy
+Python 3.8 or newer. Nothing to pip install.
+
+**On Windows:** install Python from python.org (tick "Add python.exe to PATH"),
+then use `py` where this README says `python3`, and `\` in paths:
+`py -m unittest discover -s tests`, `copy nse-budget\config.example.json trader\config.json`. Then copy
 `nse-budget/config.example.json` to `trader/config.json` in your project and
 set your budget and limits in rupees.
 

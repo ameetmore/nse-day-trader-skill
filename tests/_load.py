@@ -19,7 +19,9 @@ def load(folder, name):
 
 def run(folder, name, args, cwd):
     """(exit code, stdout, stderr) of python3 <skill>/<name>.py args, run in cwd."""
-    env = dict(os.environ, PYTHONIOENCODING="utf-8")
-    p = subprocess.run([sys.executable, "-I", os.path.join(ROOT, folder, name + ".py")] + list(args),
+    # Behave like Windows, where a pipe's default encoding (cp1252) has no rupee sign: each tool
+    # must switch its own output to UTF-8. PYTHONSAFEPATH keeps the working folder off sys.path.
+    env = dict(os.environ, PYTHONIOENCODING="cp1252", PYTHONSAFEPATH="1")
+    p = subprocess.run([sys.executable, "-s", os.path.join(ROOT, folder, name + ".py")] + list(args),
                        cwd=cwd, capture_output=True, text=True, encoding="utf-8", env=env, timeout=120)
     return p.returncode, p.stdout, p.stderr
